@@ -2,7 +2,7 @@
 'use strict';
 const router = require('express').Router();
 const { getDb } = require('../config/database');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, requireRole } = require('../middleware/auth');
 
 // GET /api/analytics/overview
 router.get('/overview', authenticate, (req, res) => {
