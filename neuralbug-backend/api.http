@@ -1,0 +1,444 @@
+### NeuralBug API — HTTP Test File
+### Use with VS Code REST Client, JetBrains HTTP Client, or Postman
+### Run `npm run seed` first, then `npm run dev`
+
+@base = http://localhost:3001/api
+@token = PASTE_ACCESS_TOKEN_HERE
+
+# ═══════════════════════════════════════
+#  AUTH
+# ═══════════════════════════════════════
+
+### Login (admin)
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@neuralbug.io",
+  "password": "admin123"
+}
+
+### Register new user
+POST {{base}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "dev@example.com",
+  "password": "devpass123",
+  "firstName": "Dev",
+  "lastName": "User",
+  "role": "Developer"
+}
+
+### Get current user
+GET {{base}}/auth/me
+Authorization: Bearer {{token}}
+
+### Forgot password
+POST {{base}}/auth/forgot-password
+Content-Type: application/json
+
+{ "email": "admin@neuralbug.io" }
+
+### Change password
+PUT {{base}}/auth/change-password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "currentPassword": "admin123", "newPassword": "newpassword123" }
+
+# ═══════════════════════════════════════
+#  BUGS
+# ═══════════════════════════════════════
+
+### List all bugs
+GET {{base}}/bugs
+Authorization: Bearer {{token}}
+
+### List critical open bugs
+GET {{base}}/bugs?severity=critical&status=open
+Authorization: Bearer {{token}}
+
+### Search bugs
+GET {{base}}/bugs?search=auth&page=1&limit=10
+Authorization: Bearer {{token}}
+
+### Bug stats
+GET {{base}}/bugs/stats
+Authorization: Bearer {{token}}
+
+### Get single bug
+GET {{base}}/bugs/BUG-001
+Authorization: Bearer {{token}}
+
+### Create bug
+POST {{base}}/bugs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Login page crashes on Safari 17",
+  "description": "The login form throws a JS error on Safari 17 when submitting with an empty password field.",
+  "severity": "high",
+  "component": "Auth Service",
+  "project": "Frontend",
+  "environment": "production",
+  "stepsToReproduce": "1. Open Safari 17\n2. Go to login page\n3. Click Sign In with empty fields",
+  "expectedResult": "Show validation error",
+  "actualResult": "Page crashes with TypeError",
+  "browser": "Safari 17",
+  "os": "macOS 14",
+  "storyPoints": 3
+}
+
+### Update bug
+PUT {{base}}/bugs/BUG-010
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "severity": "high", "status": "in-progress" }
+
+### Change status
+PATCH {{base}}/bugs/BUG-001/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "status": "in-progress" }
+
+### Bulk status update
+POST {{base}}/bugs/bulk
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "ids": ["REPLACE_WITH_REAL_BUG_IDS"],
+  "action": "status",
+  "value": "resolved"
+}
+
+### Add comment
+POST {{base}}/bugs/BUG-001/comments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "content": "Reproduced on iPhone 14 Pro. The issue is in the token refresh interceptor." }
+
+### Bug activity
+GET {{base}}/bugs/BUG-001/activity
+Authorization: Bearer {{token}}
+
+# ═══════════════════════════════════════
+#  AI ENGINE
+# ═══════════════════════════════════════
+
+### AI engine status
+GET {{base}}/ai/status
+Authorization: Bearer {{token}}
+
+### Triage a bug
+POST {{base}}/ai/triage/BUG-006
+Authorization: Bearer {{token}}
+
+### Apply AI fix
+POST {{base}}/ai/fix/BUG-010
+Authorization: Bearer {{token}}
+
+### Full codebase scan
+POST {{base}}/ai/scan
+Authorization: Bearer {{token}}
+
+### Natural language query
+POST {{base}}/ai/query
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "query": "show all critical bugs in auth service" }
+
+### Query sprint status
+POST {{base}}/ai/query
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "query": "how is the sprint going?" }
+
+# ═══════════════════════════════════════
+#  INTEGRATIONS
+# ═══════════════════════════════════════
+
+### List all integrations
+GET {{base}}/integrations
+Authorization: Bearer {{token}}
+
+### Get GitHub integration
+GET {{base}}/integrations/github
+Authorization: Bearer {{token}}
+
+### Configure GitHub
+POST {{base}}/integrations/github/configure
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "repoOwner": "my-org",
+  "repoName": "my-app",
+  "accessToken": "ghp_YOUR_TOKEN",
+  "webhookSecret": "your-webhook-secret",
+  "syncPRs": true,
+  "createIssues": true
+}
+
+### Configure Jira
+POST {{base}}/integrations/jira/configure
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "baseUrl": "https://yourorg.atlassian.net",
+  "email": "you@company.com",
+  "apiToken": "YOUR_JIRA_API_TOKEN",
+  "projectKey": "BUG",
+  "syncBidirectional": true
+}
+
+### Configure Slack
+POST {{base}}/integrations/slack/configure
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "botToken": "xoxb-YOUR-BOT-TOKEN",
+  "signingSecret": "YOUR_SIGNING_SECRET",
+  "channel": "#bugs",
+  "notifyCritical": true,
+  "notifyAIFix": true,
+  "dailyDigest": false
+}
+
+### Configure PagerDuty
+POST {{base}}/integrations/pagerduty/configure
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "apiKey": "YOUR_PD_API_KEY",
+  "serviceId": "YOUR_SERVICE_ID",
+  "fromEmail": "you@company.com",
+  "escalateOn": ["critical"],
+  "autoAck": false
+}
+
+### Configure Datadog
+POST {{base}}/integrations/datadog/configure
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "apiKey": "YOUR_DD_API_KEY",
+  "appKey": "YOUR_DD_APP_KEY",
+  "site": "datadoghq.com",
+  "traceBugs": true
+}
+
+### Configure Sentry
+POST {{base}}/integrations/sentry/configure
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "dsn": "https://key@sentry.io/project-id",
+  "authToken": "YOUR_SENTRY_AUTH_TOKEN",
+  "org": "your-org-slug",
+  "project": "your-project-slug"
+}
+
+### Test Slack
+POST {{base}}/integrations/slack/test
+Authorization: Bearer {{token}}
+
+### Sync unsynced bugs to Jira
+POST {{base}}/integrations/jira/sync
+Authorization: Bearer {{token}}
+
+### Get Sentry issues
+GET {{base}}/integrations/sentry/issues?limit=10
+Authorization: Bearer {{token}}
+
+### Disconnect integration
+DELETE {{base}}/integrations/datadog
+Authorization: Bearer {{token}}
+
+# ═══════════════════════════════════════
+#  SETTINGS
+# ═══════════════════════════════════════
+
+### Get all settings
+GET {{base}}/settings
+Authorization: Bearer {{token}}
+
+### Update general settings
+PUT {{base}}/settings/general
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "workspace_name": "NeuralBug HQ",
+  "timezone": "Asia/Kolkata",
+  "default_severity": "medium"
+}
+
+### Update AI settings
+PUT {{base}}/settings/ai
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "ai_auto_triage": "true",
+  "ai_auto_fix": "false",
+  "ai_confidence_threshold": "85",
+  "ai_model": "NB v4.1 (Latest)",
+  "ai_pattern_recognition": "true"
+}
+
+### Update notification settings
+PUT {{base}}/settings/notifications
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "notif_critical": "true",
+  "notif_ai_fix": "true",
+  "notif_daily_digest": "false",
+  "notif_sprint_report": "true",
+  "notif_slack": "true"
+}
+
+### Update security settings
+PUT {{base}}/settings/security
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "2fa_enabled": "false",
+  "session_timeout": "30",
+  "audit_log": "true"
+}
+
+### Update appearance
+PUT {{base}}/settings/appearance
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "dark_mode": "true", "compact_mode": "false", "animations": "true" }
+
+### Get user preferences
+GET {{base}}/settings/user/me
+Authorization: Bearer {{token}}
+
+### Update user preferences
+PUT {{base}}/settings/user/me
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "theme": "dark", "notifications": { "email": true, "push": true } }
+
+### List API keys
+GET {{base}}/settings/api-keys
+Authorization: Bearer {{token}}
+
+### Generate API key
+POST {{base}}/settings/api-keys
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "CI/CD Pipeline" }
+
+# ═══════════════════════════════════════
+#  ANALYTICS
+# ═══════════════════════════════════════
+
+### Overview stats
+GET {{base}}/analytics/overview
+Authorization: Bearer {{token}}
+
+### 30-day trends
+GET {{base}}/analytics/trends?days=30
+Authorization: Bearer {{token}}
+
+### Bug heatmap
+GET {{base}}/analytics/heatmap
+Authorization: Bearer {{token}}
+
+### By severity
+GET {{base}}/analytics/by-severity
+Authorization: Bearer {{token}}
+
+### By project
+GET {{base}}/analytics/by-project
+Authorization: Bearer {{token}}
+
+### Recent activity
+GET {{base}}/analytics/activity?limit=20
+Authorization: Bearer {{token}}
+
+# ═══════════════════════════════════════
+#  SPRINTS
+# ═══════════════════════════════════════
+
+### List sprints
+GET {{base}}/sprints
+Authorization: Bearer {{token}}
+
+### Active sprint + Kanban
+GET {{base}}/sprints/active
+Authorization: Bearer {{token}}
+
+### Create sprint
+POST {{base}}/sprints
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Sprint 15",
+  "goal": "Zero critical bugs in auth & payment",
+  "startDate": "2026-04-16",
+  "endDate": "2026-04-30",
+  "storyPointsTotal": 60
+}
+
+# ═══════════════════════════════════════
+#  TEAM
+# ═══════════════════════════════════════
+
+### List team members
+GET {{base}}/team
+Authorization: Bearer {{token}}
+
+### Invite member
+POST {{base}}/team/invite
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "email": "newdev@company.com" }
+
+# ═══════════════════════════════════════
+#  NOTIFICATIONS
+# ═══════════════════════════════════════
+
+### Get notifications
+GET {{base}}/notifications
+Authorization: Bearer {{token}}
+
+### Unread only
+GET {{base}}/notifications?unread=true
+Authorization: Bearer {{token}}
+
+### Mark all read
+PATCH {{base}}/notifications/read-all
+Authorization: Bearer {{token}}
+
+# ═══════════════════════════════════════
+#  HEALTH
+# ═══════════════════════════════════════
+
+### Health check
+GET http://localhost:3001/health

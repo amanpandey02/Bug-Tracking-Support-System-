@@ -1,0 +1,1741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>NeuralBug</title>
+<style>
+:root{--bg:#040710;--s1:#0a0e1a;--s2:#101622;--s3:#18202e;--s4:#202c40;
+--a1:#00f5a0;--a2:#00d4ff;--a3:#ff6b6b;--a4:#ffa800;--a5:#a855f7;--a6:#f472b6;
+--t1:#eef4ff;--t2:#8899bb;--t3:#3d4f6a;
+--bd:rgba(0,245,160,0.1);--bd2:rgba(0,212,255,0.12);
+--glow1:0 0 30px rgba(0,245,160,0.15);--glow2:0 0 30px rgba(0,212,255,0.15)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--t1);font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--s4);border-radius:4px}
+
+/* ── PAGES ── */
+.page{position:fixed;inset:0;z-index:10;overflow-y:auto;background:var(--bg);transition:opacity .45s ease,transform .45s ease}
+.page.hidden{opacity:0;pointer-events:none;transform:translateY(16p x)}
+
+/* ═══ CANVAS ═══ */
+#bgCanvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+
+/* ═══════════════════════════════════════════
+   LOGIN PAGE
+═══════════════════════════════════════════ */
+#loginPage{display:flex;align-items:center;justify-content:center;min-height:100%}
+.lc{position:relative;z-index:1;display:grid;grid-template-columns:1fr 430px;max-width:1000px;width:calc(100% - 40px);margin:20px;border-radius:28px;overflow:hidden;border:1px solid rgba(0,245,160,0.18);box-shadow:0 0 100px rgba(0,245,160,0.08),0 50px 100px rgba(0,0,0,0.7)}
+
+/* Animated border trace */
+.lc::before{content:'';position:absolute;inset:0;border-radius:28px;background:conic-gradient(from var(--a,0deg),transparent 340deg,var(--a1) 350deg,transparent 360deg);animation:borderTrace 4s linear infinite;z-index:-1;padding:1px}
+@keyframes borderTrace{to{--a:360deg}}
+@property --a{syntax:'<angle>';inherits:false;initial-value:0deg}
+
+/* LEFT PANEL */
+.ll{background:linear-gradient(145deg,rgba(4,7,16,0.95),rgba(8,12,26,0.9));backdrop-filter:blur(30px);padding:48px 42px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;min-height:600px}
+.ll::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 25% 45%,rgba(0,245,160,0.07),transparent 65%)}
+.ll::after{content:'';position:absolute;bottom:-100px;right:-100px;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(168,85,247,0.06),transparent 70%)}
+
+.ll-logo{display:flex;align-items:center;gap:12px;margin-bottom:32px;position:relative;z-index:1}
+.ll-logo-mark{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,var(--a1),var(--a2));display:flex;align-items:center;justify-content:center;font-size:22px;animation:logoPulse 3s ease-in-out infinite;box-shadow:0 0 20px rgba(0,245,160,0.3)}
+@keyframes logoPulse{0%,100%{box-shadow:0 0 20px rgba(0,245,160,0.3)}50%{box-shadow:0 0 40px rgba(0,245,160,0.6)}}
+.ll-logo-name{font-size:22px;font-weight:800;letter-spacing:-0.5px}
+.ll-logo-name span{color:var(--a1)}
+
+.ll-headline{font-size:36px;font-weight:800;line-height:1.12;letter-spacing:-1.5px;margin-bottom:16px;position:relative;z-index:1}
+.ll-headline em{color:transparent;background:linear-gradient(135deg,var(--a1),var(--a2));-webkit-background-clip:text;background-clip:text;font-style:normal}
+
+/* Typewriter */
+.typewriter{font-family:monospace;font-size:13px;color:var(--a1);margin-bottom:28px;position:relative;z-index:1}
+.typewriter::after{content:'|';animation:blink .7s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* Floating scan cards on left */
+.scan-demo{position:relative;z-index:1;display:flex;flex-direction:column;gap:8px;margin-bottom:24px}
+.sd-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;animation:floatCard 4s ease-in-out infinite}
+.sd-card:nth-child(2){animation-delay:-1.5s}.sd-card:nth-child(3){animation-delay:-3s}
+@keyframes floatCard{0%,100%{transform:translateX(0) translateY(0)}33%{transform:translateX(4px) translateY(-3px)}66%{transform:translateX(-3px) translateY(2px)}}
+.sd-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.sd-label{font-size:11px;font-weight:600}
+.sd-cat{font-size:10px;color:var(--t3);font-family:monospace;margin-top:1px}
+.sd-bar{margin-left:auto;display:flex;align-items:center;gap:4px}
+.sd-conf{font-family:monospace;font-size:10px;color:var(--t2)}
+.sd-dot{width:6px;height:6px;border-radius:50%;animation:blink 1.2s ease-in-out infinite}
+
+/* Stats row */
+.ll-stats{display:flex;gap:20px;position:relative;z-index:1}
+.ls{text-align:center;padding:12px 16px;background:rgba(0,245,160,0.06);border:1px solid var(--bd);border-radius:10px}
+.ls-val{font-size:24px;font-weight:800;color:var(--a1);letter-spacing:-1px}
+.ls-lbl{font-size:9px;color:var(--t3);font-family:monospace;letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+
+/* RIGHT PANEL */
+.lr{background:rgba(10,14,26,0.97);backdrop-filter:blur(30px);padding:44px 40px;display:flex;flex-direction:column;gap:0}
+
+/* Tabs */
+.ltabs{display:flex;margin-bottom:24px;border-bottom:1px solid var(--bd)}
+.ltab{padding:9px 18px;font-size:13px;font-weight:600;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s}
+.ltab:hover{color:var(--t2)}.ltab.active{color:var(--a1);border-bottom-color:var(--a1)}
+
+/* Forms */
+.lf{display:flex;flex-direction:column;gap:14px}
+.lf.hidden{display:none}
+.lf-title{font-size:20px;font-weight:800;letter-spacing:-.5px}
+.lf-sub{font-size:11px;color:var(--t3);font-family:monospace}
+
+/* Auth Method Grid */
+.method-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:4px}
+.method-btn{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 6px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:9px;font-weight:600;color:var(--t3);letter-spacing:.5px;text-transform:uppercase}
+.method-btn:hover{background:rgba(255,255,255,0.08);border-color:var(--bd2);color:var(--t2);transform:translateY(-1px)}
+.method-btn.active{background:rgba(0,245,160,0.08);border-color:rgba(0,245,160,0.3);color:var(--a1);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,245,160,0.1)}
+.method-icon{font-size:18px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:7px}
+.mi-google{background:linear-gradient(135deg,#4285f4,#34a853,#fbbc05,#ea4335)}
+.mi-github{background:#333}
+.mi-ms{background:linear-gradient(135deg,#f25022,#7fba00,#00a4ef,#ffb900)}
+.mi-apple{background:#111}
+.mi-sso{background:linear-gradient(135deg,var(--a5),var(--a2))}
+.mi-bio{background:linear-gradient(135deg,var(--a1),var(--a5))}
+.mi-magic{background:linear-gradient(135deg,var(--a4),var(--a3))}
+
+/* Inputs */
+.fg{display:flex;flex-direction:column;gap:5px}
+.fl{font-size:11px;font-weight:600;color:var(--t2);letter-spacing:.5px;text-transform:uppercase;font-family:monospace}
+.fi,.fsel{background:var(--s2);border:1px solid rgba(255,255,255,0.07);border-radius:10px;color:var(--t1);font-family:inherit;font-size:13px;padding:11px 14px;outline:none;width:100%;transition:all .25s;position:relative}
+.fi:focus,.fsel:focus{border-color:var(--a1);box-shadow:0 0 0 3px rgba(0,245,160,0.1),inset 0 0 20px rgba(0,245,160,0.02)}
+.fi::placeholder{color:var(--t3)}.fsel option{background:var(--s2)}
+.fi-wrap{position:relative}
+.fi-wrap .fi{padding-right:42px}
+.fi-eye{position:absolute;right:13px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--t3);font-size:15px;user-select:none;transition:color .2s}
+.fi-eye:hover{color:var(--a1)}
+
+/* Divider */
+.fdiv{display:flex;align-items:center;gap:10px;color:var(--t3);font-size:11px}
+.fdiv::before,.fdiv::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.06)}
+
+/* Buttons */
+.btn-lg{background:linear-gradient(135deg,var(--a1),var(--a2));color:#040710;border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:14px;padding:13px;cursor:pointer;transition:all .2s;width:100%;position:relative;overflow:hidden}
+.btn-lg::before{content:'';position:absolute;inset:0;background:rgba(255,255,255,0);transition:.2s}
+.btn-lg:hover::before{background:rgba(255,255,255,0.12)}
+.btn-lg:active{transform:scale(0.98)}
+.btn-lg:disabled{opacity:.6;cursor:not-allowed}
+.btn-social{background:var(--s2);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:var(--t1);font-family:inherit;font-weight:600;font-size:13px;padding:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;transition:all .2s}
+.btn-social:hover{border-color:var(--bd2);background:var(--s3)}
+
+/* Alerts */
+.alert-err{background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.3);border-radius:8px;padding:9px 13px;font-size:12px;color:var(--a3);display:none}
+.alert-ok{background:rgba(0,245,160,0.1);border:1px solid rgba(0,245,160,0.3);border-radius:8px;padding:9px 13px;font-size:12px;color:var(--a1);display:none}
+.alert-err.show,.alert-ok.show{display:block}
+.shake{animation:shake .4s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+
+/* OTP boxes */
+.otp-row{display:flex;gap:8px}
+.otp-box{flex:1;height:52px;background:var(--s2);border:2px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--t1);font-size:22px;font-weight:700;text-align:center;outline:none;transition:all .2s;font-family:monospace}
+.otp-box:focus{border-color:var(--a1);box-shadow:0 0 0 3px rgba(0,245,160,0.15);background:rgba(0,245,160,0.05)}
+
+/* Check */
+.fcheck{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--t2);cursor:pointer}
+.fcheck input{accent-color:var(--a1)}
+.forgot-link{font-size:11px;color:var(--a2);cursor:pointer;font-family:monospace;transition:color .2s}
+.forgot-link:hover{color:var(--a1)}
+
+/* Step indicator */
+.steps{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.step{width:28px;height:28px;border-radius:50%;border:2px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--t3);transition:all .3s}
+.step.done{background:var(--a1);border-color:var(--a1);color:#040710}
+.step.active{border-color:var(--a1);color:var(--a1)}
+.step-line{flex:1;height:1px;background:rgba(255,255,255,0.08);transition:background .3s}
+.step-line.done{background:var(--a1)}
+
+/* Biometric animation */
+.bio-wrap{display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px 0}
+.bio-ring{width:80px;height:80px;border-radius:50%;border:3px solid var(--a1);display:flex;align-items:center;justify-content:center;font-size:36px;position:relative;animation:bioScan 2s ease-in-out infinite}
+.bio-ring::before{content:'';position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(0,245,160,0.2);animation:bioRipple 2s ease-in-out infinite}
+.bio-ring::after{content:'';position:absolute;inset:-12px;border-radius:50%;border:1px solid rgba(0,245,160,0.1);animation:bioRipple 2s ease-in-out infinite .5s}
+@keyframes bioScan{0%,100%{box-shadow:0 0 20px rgba(0,245,160,0.4)}50%{box-shadow:0 0 40px rgba(0,245,160,0.8)}}
+@keyframes bioRipple{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0;transform:scale(1.2)}}
+
+/* ═══════════════════════════════════════════
+   APP PAGE
+═══════════════════════════════════════════ */
+#appPage{display:flex;flex-direction:column}
+.tnav{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:56px;background:rgba(4,7,16,0.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:50;flex-shrink:0}
+.tnav-brand{display:flex;align-items:center;gap:9px;font-size:17px;font-weight:800}
+.tnav-icon{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--a1),var(--a2));display:flex;align-items:center;justify-content:center;font-size:15px}
+.tnav-icon span{color:var(--a1)}
+.tnav-center{display:flex;gap:2px}
+.nb{padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;color:var(--t3);cursor:pointer;transition:all .15s;border:none;background:none;font-family:inherit}
+.nb:hover{color:var(--t1);background:var(--s2)}.nb.active{color:var(--a1);background:rgba(0,245,160,0.08);border:1px solid rgba(0,245,160,0.15)}
+.tnav-right{display:flex;align-items:center;gap:8px}
+.nav-notif{position:relative;cursor:pointer;padding:6px;border-radius:7px;transition:background .2s;font-size:18px}
+.nav-notif:hover{background:var(--s2)}
+.nbadge{position:absolute;top:2px;right:2px;width:14px;height:14px;background:var(--a3);border-radius:50%;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#fff;font-family:monospace}
+.nav-user{display:flex;align-items:center;gap:7px;cursor:pointer;padding:5px 9px;border-radius:9px;transition:background .2s;position:relative}
+.nav-user:hover{background:var(--s2)}
+.uav{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.uname{font-size:12px;font-weight:600}
+.udd{position:absolute;top:calc(100%+6px);right:0;background:var(--s2);border:1px solid var(--bd);border-radius:11px;width:160px;padding:6px;z-index:200;display:none;box-shadow:0 20px 40px rgba(0,0,0,0.6)}
+.udd.open{display:block;animation:ddIn .15s ease}
+@keyframes ddIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.ddi{padding:7px 11px;border-radius:7px;font-size:12px;color:var(--t2);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:7px}
+.ddi:hover{background:var(--s3);color:var(--t1)}
+.ddi-sep{height:1px;background:var(--bd);margin:3px 0}
+
+/* App shell */
+.shell{display:grid;grid-template-columns:200px 1fr;height:calc(100vh - 56px);overflow:hidden}
+.sb{background:rgba(10,14,26,0.7);border-right:1px solid var(--bd);padding:12px 7px;display:flex;flex-direction:column;gap:1px;overflow-y:auto}
+.sb-sec{font-family:monospace;font-size:8.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);padding:11px 9px 4px}
+.sb-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:500;color:var(--t2);transition:all .14s;border:1px solid transparent}
+.sb-item:hover{background:var(--s2);color:var(--t1)}.sb-item.active{background:rgba(0,245,160,0.08);color:var(--a1);border-color:rgba(0,245,160,0.15)}
+.sb-ico{font-size:13px;width:17px;text-align:center;flex-shrink:0}
+.sb-badge{margin-left:auto;font-family:monospace;font-size:9px;padding:2px 5px;border-radius:3px;background:var(--s3);color:var(--t3)}
+.sb-badge.d{background:rgba(255,107,107,0.15);color:var(--a3)}.sb-badge.w{background:rgba(255,168,0,0.15);color:var(--a4)}
+.ai-panel{background:linear-gradient(135deg,rgba(0,245,160,0.06),rgba(0,212,255,0.04));border:1px solid rgba(0,245,160,0.15);border-radius:10px;padding:11px;margin-top:auto;margin-top:12px}
+.aip-title{font-family:monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--a1);margin-bottom:7px;display:flex;align-items:center;gap:5px}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--a1);animation:blink 1.2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.aip-row{display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.aip-row:last-child{border:none}
+.aip-k{color:var(--t3)}.aip-v{color:var(--t1);font-weight:600;font-family:monospace}
+
+/* Main content */
+.main{overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:18px}
+.view{display:none}.view.active{display:flex;flex-direction:column;gap:18px}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.ph-l h1{font-size:22px;font-weight:800;letter-spacing:-.5px}
+.ph-l h1 span{color:var(--a1)}
+.ph-l p{color:var(--t3);font-size:11px;margin-top:2px;font-family:monospace}
+.ph-r{display:flex;gap:6px;align-items:center;flex-shrink:0}
+
+.btn{padding:7px 13px;border-radius:8px;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer;transition:all .18s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;border:none}
+.btn-ghost{background:var(--s2);color:var(--t2);border:1px solid var(--bd2)}.btn-ghost:hover{color:var(--t1);border-color:var(--a2)}
+.btn-primary{background:linear-gradient(135deg,var(--a1),var(--a2));color:#040710;font-weight:700}.btn-primary:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn-danger{background:rgba(255,107,107,.1);color:var(--a3);border:1px solid rgba(255,107,107,.2)}
+.btn-warn{background:rgba(255,168,0,.1);color:var(--a4);border:1px solid rgba(255,168,0,.2)}
+.btn-purple{background:rgba(168,85,247,.1);color:var(--a5);border:1px solid rgba(168,85,247,.2)}
+.btn-scan{background:linear-gradient(135deg,var(--a5),var(--a2));color:#fff;font-weight:700}
+.btn-sm{padding:5px 11px;font-size:11px}.btn-xs{padding:3px 8px;font-size:10px}
+.btn:active{transform:scale(0.97)}
+
+/* Cards and panels */
+.panel{background:var(--s1);border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+.panel-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px solid var(--bd)}
+.panel-hd-l{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700}
+.ptag{font-family:monospace;font-size:9px;padding:2px 6px;border-radius:3px}
+.tg{background:rgba(0,245,160,.12);color:var(--a1)}.tb{background:rgba(0,212,255,.12);color:var(--a2)}
+.tr{background:rgba(255,107,107,.12);color:var(--a3)}.tp{background:rgba(168,85,247,.12);color:var(--a5)}
+.tw{background:rgba(255,168,0,.12);color:var(--a4)}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.sc{background:var(--s1);border:1px solid var(--bd);border-radius:11px;padding:14px;position:relative;overflow:hidden;cursor:pointer;transition:all .2s}
+.sc:hover{border-color:var(--bd2);transform:translateY(-2px)}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:11px 11px 0 0}
+.c-green::before{background:linear-gradient(90deg,var(--a1),transparent)}
+.c-blue::before{background:linear-gradient(90deg,var(--a2),transparent)}
+.c-red::before{background:linear-gradient(90deg,var(--a3),transparent)}
+.c-yellow::before{background:linear-gradient(90deg,var(--a4),transparent)}
+.c-purple::before{background:linear-gradient(90deg,var(--a5),transparent)}
+.sc-lbl{font-family:monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:5px}
+.sc-val{font-size:28px;font-weight:800;letter-spacing:-1.5px;line-height:1}
+.c-green .sc-val{color:var(--a1)}.c-blue .sc-val{color:var(--a2)}.c-red .sc-val{color:var(--a3)}.c-yellow .sc-val{color:var(--a4)}.c-purple .sc-val{color:var(--a5)}
+.sc-delta{margin-top:4px;font-size:10px;color:var(--t3);font-family:monospace}
+
+/* Bug table */
+.btbl{width:100%;border-collapse:collapse}
+.btbl thead th{text-align:left;font-family:monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);padding:8px 13px;border-bottom:1px solid var(--bd)}
+.btbl tbody tr{border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:background .12s}
+.btbl tbody tr:hover{background:var(--s2)}.btbl tbody tr:last-child{border:none}
+.btbl td{padding:10px 13px;font-size:12px;vertical-align:middle}
+.bid{font-family:monospace;font-size:10px;color:var(--t3)}
+.bt{font-weight:600}.bc{font-size:10px;color:var(--t3);font-family:monospace;margin-top:1px}
+.sev{display:inline-flex;align-items:center;gap:3px;font-family:monospace;font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;text-transform:uppercase;letter-spacing:.5px}
+.sev.critical{background:rgba(255,107,107,.12);color:var(--a3);border:1px solid rgba(255,107,107,.2)}
+.sev.high{background:rgba(255,168,0,.12);color:var(--a4);border:1px solid rgba(255,168,0,.2)}
+.sev.medium{background:rgba(0,212,255,.12);color:var(--a2);border:1px solid rgba(0,212,255,.2)}
+.sev.low{background:rgba(0,245,160,.12);color:var(--a1);border:1px solid rgba(0,245,160,.2)}
+.sp{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 9px;border-radius:99px}
+.sp::before{content:'';width:5px;height:5px;border-radius:50%}
+.sp.open{background:rgba(255,107,107,.1);color:var(--a3)}.sp.open::before{background:var(--a3);animation:blink 1.5s infinite}
+.sp.in-progress{background:rgba(255,168,0,.1);color:var(--a4)}.sp.in-progress::before{background:var(--a4)}
+.sp.resolved{background:rgba(0,245,160,.1);color:var(--a1)}.sp.resolved::before{background:var(--a1)}
+.sp.ai-fixing{background:rgba(168,85,247,.1);color:var(--a5)}.sp.ai-fixing::before{background:var(--a5);animation:blink 1s infinite}
+.sp.review{background:rgba(0,212,255,.1);color:var(--a2)}.sp.review::before{background:var(--a2)}
+.conf-wrap{display:flex;align-items:center;gap:5px;font-family:monospace;font-size:10px}
+.conf-bar{width:44px;height:3px;background:var(--s3);border-radius:99px;overflow:hidden}
+.conf-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--a2),var(--a1))}
+.av{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+
+/* Tabs */
+.tabs-row{display:flex;border-bottom:1px solid var(--bd);padding:0 14px}
+.tab{padding:8px 12px;font-size:12px;font-weight:600;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.tab:hover{color:var(--t2)}.tab.active{color:var(--a1);border-bottom-color:var(--a1)}
+
+/* Filter bar */
+.fbar{display:flex;align-items:center;gap:6px;padding:9px 13px;border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.sw{flex:1;min-width:150px;display:flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--bd);border-radius:7px;padding:6px 10px;transition:border-color .2s}
+.sw:focus-within{border-color:var(--a1)}.sw input{background:none;border:none;outline:none;color:var(--t1);font-family:inherit;font-size:12px;width:100%}
+.sw input::placeholder{color:var(--t3)}
+.fchip{font-size:10px;font-weight:600;padding:4px 10px;border-radius:99px;border:1px solid var(--bd);background:var(--s2);color:var(--t3);cursor:pointer;transition:all .15s;font-family:monospace}
+.fchip:hover,.fchip.active{background:rgba(0,245,160,.08);border-color:rgba(0,245,160,.25);color:var(--a1)}
+
+/* AI Bar */
+.ai-bar{display:flex;align-items:center;gap:8px;background:var(--s1);border:1px solid var(--bd2);border-radius:10px;padding:10px 13px;transition:all .2s}
+.ai-bar:focus-within{border-color:var(--a1);box-shadow:0 0 0 3px rgba(0,245,160,.08)}
+.ai-bar input{flex:1;background:none;border:none;outline:none;color:var(--t1);font-family:monospace;font-size:12px}
+.ai-bar input::placeholder{color:var(--t3)}
+.ai-send{background:linear-gradient(135deg,var(--a1),var(--a2));border:none;border-radius:6px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;transition:transform .15s;flex-shrink:0}
+.ai-send:hover{transform:scale(1.1)}
+
+/* Activity */
+.act-list{padding:10px;display:flex;flex-direction:column}
+.ai{display:flex;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px}
+.ai:last-child{border:none}
+.ai-dot{width:6px;height:6px;border-radius:50%;margin-top:3px;flex-shrink:0}
+.ai-msg{flex:1;line-height:1.5;color:var(--t2)}
+.ai-msg em{color:var(--a2);font-style:normal;font-weight:600}
+.ai-time{color:var(--t3);font-family:monospace;font-size:9px}
+
+/* Kanban */
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.kc{background:var(--s2);border-radius:10px;border:1px solid var(--bd);overflow:hidden}
+.kc-hd{padding:9px 12px;border-bottom:1px solid var(--bd);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:space-between}
+.kc-cnt{font-family:monospace;font-size:9px;padding:1px 5px;border-radius:3px;background:var(--s3);color:var(--t3)}
+.kc-body{padding:7px;display:flex;flex-direction:column;gap:6px;min-height:160px}
+.kcard{background:var(--s1);border:1px solid var(--bd);border-radius:8px;padding:9px;cursor:pointer;transition:all .15s}
+.kcard:hover{border-color:var(--a2);transform:translateY(-1px)}
+.kcard-id{font-family:monospace;font-size:9px;color:var(--t3);margin-bottom:3px}
+.kcard-title{font-size:11px;font-weight:600;line-height:1.4;margin-bottom:7px}
+.kcard-foot{display:flex;align-items:center;justify-content:space-between}
+
+/* Team */
+.team-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.tc{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:18px;text-align:center;transition:all .2s;cursor:pointer}
+.tc:hover{border-color:var(--a2);transform:translateY(-2px)}
+.tc-av{width:50px;height:50px;border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700}
+.tc-name{font-size:13px;font-weight:700;margin-bottom:2px}
+.tc-role{font-size:11px;color:var(--t3);font-family:monospace;margin-bottom:10px}
+.tc-stats{display:flex;justify-content:center;gap:18px}
+.tcs-val{font-size:17px;font-weight:800;text-align:center}
+.tcs-lbl{font-size:9px;color:var(--t3);font-family:monospace;text-transform:uppercase;letter-spacing:.8px}
+
+/* Charts */
+.bc-wrap{display:flex;align-items:flex-end;gap:4px;height:80px}
+.bc-grp{flex:1;display:flex;gap:2px;align-items:flex-end;height:100%}
+.bc-bar{flex:1;border-radius:3px 3px 0 0;cursor:pointer;transition:filter .15s}
+.bc-bar:hover{filter:brightness(1.3)}
+.bc-bar.res{background:linear-gradient(180deg,var(--a1),rgba(0,245,160,.3))}
+.bc-bar.opn{background:linear-gradient(180deg,var(--a3),rgba(255,107,107,.3))}
+.bc-bar.aif{background:linear-gradient(180deg,var(--a5),rgba(168,85,247,.3))}
+.bc-lbl{flex:1;text-align:center;font-family:monospace;font-size:8px;color:var(--t3)}
+.grid2{display:grid;grid-template-columns:1fr 290px;gap:14px}
+.pb-wrap{margin:6px 0}
+.pb-lbl{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;color:var(--t2)}
+.pb-track{height:6px;background:var(--s3);border-radius:99px;overflow:hidden}
+.pb-fill{height:100%;border-radius:99px}
+.heatmap{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.hm-cell{height:14px;border-radius:2px;cursor:pointer;transition:transform .15s}
+.hm-cell:hover{transform:scale(1.3)}
+
+/* Notifications */
+.ni{display:flex;gap:9px;padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;transition:background .15s;position:relative}
+.ni:hover{background:var(--s2)}.ni:last-child{border:none}
+.ni.unread{background:rgba(0,245,160,.02)}.ni.unread::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--a1)}
+.ni-icon{font-size:19px;flex-shrink:0}
+.ni-title{font-size:12px;font-weight:600;margin-bottom:2px}
+.ni-sub{font-size:10px;color:var(--t3);font-family:monospace}
+.ni-time{font-size:10px;color:var(--t3);font-family:monospace;white-space:nowrap;flex-shrink:0}
+
+/* Settings */
+.ss{background:var(--s1);border:1px solid var(--bd);border-radius:12px;overflow:hidden;margin-bottom:11px}
+.ss-hd{padding:12px 16px;border-bottom:1px solid var(--bd);font-size:13px;font-weight:700}
+.ss-body{padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+.ss-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.ss-row:last-child{border:none}
+.ss-label{font-size:12px;font-weight:600}.ss-desc{font-size:10px;color:var(--t3);margin-top:1px}
+.toggle{width:38px;height:21px;background:var(--s3);border-radius:99px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--a1)}.toggle::after{content:'';position:absolute;width:15px;height:15px;border-radius:50%;background:#fff;top:3px;left:3px;transition:left .2s}
+.toggle.on::after{left:20px}
+.ss-sel{background:var(--s2);border:1px solid var(--bd);border-radius:7px;color:var(--t1);font-family:monospace;font-size:11px;padding:5px 9px;outline:none;cursor:pointer}
+.ss-sel:focus{border-color:var(--a1)}
+
+/* ═══ BUG SCANNER ═══ */
+.scanner-hero{background:linear-gradient(135deg,rgba(10,14,26,0.9),rgba(18,24,40,0.9));border:1px solid rgba(168,85,247,0.2);border-radius:16px;padding:0;overflow:hidden;position:relative}
+.scanner-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(168,85,247,0.06),transparent 60%);pointer-events:none}
+.scanner-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(168,85,247,0.15)}
+.scanner-hd-l{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700}
+.scanner-badge{font-family:monospace;font-size:9px;padding:3px 8px;border-radius:3px;background:rgba(168,85,247,0.15);color:var(--a5);letter-spacing:.5px;font-weight:700;text-transform:uppercase}
+.scanner-tabs{display:flex;border-bottom:1px solid rgba(168,85,247,0.12);padding:0 18px}
+.stab{padding:10px 14px;font-size:12px;font-weight:600;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;display:flex;align-items:center;gap:6px}
+.stab:hover{color:var(--t2)}.stab.active{color:var(--a5);border-bottom-color:var(--a5)}
+.scanner-body{padding:18px;display:flex;flex-direction:column;gap:14px}
+
+/* URL input */
+.url-input-wrap{display:flex;gap:8px;align-items:stretch}
+.url-inp{flex:1;background:var(--s2);border:1px solid rgba(168,85,247,0.2);border-radius:9px;color:var(--t1);font-family:monospace;font-size:12px;padding:10px 14px;outline:none;transition:all .2s}
+.url-inp:focus{border-color:var(--a5);box-shadow:0 0 0 3px rgba(168,85,247,0.1)}
+.url-inp::placeholder{color:var(--t3)}
+
+/* Drop zone */
+.dropzone{border:2px dashed rgba(168,85,247,0.25);border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:all .25s;position:relative;overflow:hidden}
+.dropzone:hover,.dropzone.drag-over{border-color:var(--a5);background:rgba(168,85,247,0.05)}
+.dropzone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.dz-icon{font-size:32px;margin-bottom:8px}
+.dz-title{font-size:13px;font-weight:600;margin-bottom:4px}
+.dz-sub{font-size:11px;color:var(--t3);font-family:monospace}
+.dz-file{font-size:11px;color:var(--a5);font-family:monospace;margin-top:6px;font-weight:600}
+
+/* Category filters */
+.cat-filters{display:flex;gap:6px;flex-wrap:wrap}
+.cat-chip{font-size:10px;font-weight:700;padding:5px 12px;border-radius:99px;border:1px solid var(--bd);background:var(--s2);color:var(--t3);cursor:pointer;transition:all .15s;font-family:monospace;display:flex;align-items:center;gap:5px}
+.cat-chip:hover{color:var(--t2)}.cat-chip.active{border-color:currentColor}
+.cat-chip.fe.active{color:var(--a2);background:rgba(0,212,255,.08);border-color:rgba(0,212,255,.25)}
+.cat-chip.be.active{color:var(--a4);background:rgba(255,168,0,.08);border-color:rgba(255,168,0,.25)}
+.cat-chip.ux.active{color:var(--a6);background:rgba(244,114,182,.08);border-color:rgba(244,114,182,.25)}
+.cat-chip.sys.active{color:var(--a3);background:rgba(255,107,107,.08);border-color:rgba(255,107,107,.25)}
+.cat-chip.all.active{color:var(--a5);background:rgba(168,85,247,.08);border-color:rgba(168,85,247,.25)}
+
+/* Scanning animation */
+.scanning-anim{display:none;flex-direction:column;align-items:center;gap:12px;padding:20px 0}
+.scanning-anim.show{display:flex}
+.radar-wrap{position:relative;width:80px;height:80px}
+.radar-ring{position:absolute;border-radius:50%;border:1px solid rgba(168,85,247,0.3)}
+.radar-ring:nth-child(1){inset:0}
+.radar-ring:nth-child(2){inset:12px;border-color:rgba(168,85,247,0.2)}
+.radar-ring:nth-child(3){inset:24px;border-color:rgba(168,85,247,0.1)}
+.radar-sweep{position:absolute;inset:0;border-radius:50%;background:conic-gradient(rgba(168,85,247,0.6),transparent 60deg);animation:radarSpin 1.5s linear infinite}
+@keyframes radarSpin{to{transform:rotate(360deg)}}
+.radar-dot{position:absolute;width:6px;height:6px;border-radius:50%;background:var(--a5);top:50%;left:50%;transform:translate(-50%,-50%)}
+.scan-label{font-size:12px;color:var(--a5);font-family:monospace;font-weight:600;animation:scanBlink .8s ease-in-out infinite}
+@keyframes scanBlink{0%,100%{opacity:1}50%{opacity:.4}}
+.scan-progress{width:200px;height:3px;background:var(--s3);border-radius:99px;overflow:hidden}
+.scan-fill{height:100%;background:linear-gradient(90deg,var(--a5),var(--a2));border-radius:99px;width:0;transition:width .3s ease}
+
+/* Bug results */
+.results-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.result-card{background:var(--s2);border-radius:10px;border:1px solid var(--bd);padding:13px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.result-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.rc-critical::before{background:var(--a3)}.rc-high::before{background:var(--a4)}.rc-medium::before{background:var(--a2)}.rc-low::before{background:var(--a1)}
+.result-card:hover{border-color:var(--bd2);transform:translateY(-1px)}
+.rc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;gap:8px}
+.rc-cat{font-size:9px;font-weight:700;font-family:monospace;padding:2px 7px;border-radius:3px;text-transform:uppercase;letter-spacing:.5px}
+.rc-cat.fe{background:rgba(0,212,255,.12);color:var(--a2)}.rc-cat.be{background:rgba(255,168,0,.12);color:var(--a4)}
+.rc-cat.ux{background:rgba(244,114,182,.12);color:var(--a6)}.rc-cat.sys{background:rgba(255,107,107,.12);color:var(--a3)}
+.rc-title{font-size:12px;font-weight:700;margin-bottom:4px;line-height:1.4}
+.rc-desc{font-size:11px;color:var(--t2);line-height:1.5;margin-bottom:8px}
+.rc-fix{font-size:10px;color:var(--a1);font-family:monospace;background:rgba(0,245,160,.06);border:1px solid rgba(0,245,160,.12);border-radius:6px;padding:6px 8px;line-height:1.5;margin-bottom:8px}
+.rc-fix-lbl{font-size:9px;color:var(--t3);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px}
+.rc-foot{display:flex;align-items:center;justify-content:space-between}
+.rc-conf{font-family:monospace;font-size:10px;color:var(--t3)}
+
+/* Modal */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(4,7,16,.85);backdrop-filter:blur(8px);z-index:500;align-items:center;justify-content:center;padding:20px}
+.modal-ov.open{display:flex}
+.modal{background:var(--s1);border:1px solid var(--bd2);border-radius:16px;width:640px;max-width:100%;max-height:88vh;overflow-y:auto;animation:mIn .25s ease}
+@keyframes mIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-hd{display:flex;align-items:flex-start;justify-content:space-between;padding:17px 20px;border-bottom:1px solid var(--bd);position:sticky;top:0;background:var(--s1);z-index:1}
+.modal-id{font-family:monospace;font-size:10px;color:var(--t3);margin-bottom:2px}
+.modal-title{font-size:16px;font-weight:800}
+.modal-close{background:var(--s2);border:1px solid var(--bd);color:var(--t3);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.modal-close:hover{color:var(--t1)}
+.modal-body{padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+.meta-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.mc{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:9px}
+.mk{font-size:9px;color:var(--t3);font-family:monospace;letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px}
+.mv{font-size:12px;font-weight:600}
+.sec-t{font-family:monospace;font-size:8.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:6px}
+.code-blk{background:#070a12;border:1px solid var(--bd);border-radius:8px;padding:11px;font-family:monospace;font-size:11px;color:#adbac7;line-height:1.8;overflow-x:auto}
+.ai-box{background:linear-gradient(135deg,rgba(0,245,160,.05),rgba(0,212,255,.03));border:1px solid rgba(0,245,160,.18);border-radius:10px;padding:13px}
+.ai-box-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.ai-chip{background:rgba(0,245,160,.15);color:var(--a1);font-family:monospace;font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;letter-spacing:.5px}
+.ai-conf{font-family:monospace;font-size:11px;color:var(--a1)}
+.ai-text{font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:11px}
+.tl{display:flex;gap:9px;padding-bottom:11px;position:relative}
+.tl:not(:last-child)::before{content:'';position:absolute;left:9px;top:20px;bottom:0;width:1px;background:var(--bd)}
+.tl-dot{width:20px;height:20px;border-radius:50%;border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;background:var(--s2)}
+.tl-action{font-size:12px;font-weight:600}.tl-time{font-family:monospace;font-size:9px;color:var(--t3)}
+.tl-detail{font-size:11px;color:var(--t3);line-height:1.5;margin-top:1px}
+
+/* New bug form */
+.fg{display:flex;flex-direction:column;gap:4px}
+.fl{font-size:10px;font-weight:600;color:var(--t2);font-family:monospace;letter-spacing:.5px;text-transform:uppercase}
+.ffi,.ffsel,.ffta{background:var(--s2);border:1px solid rgba(255,255,255,.07);border-radius:8px;color:var(--t1);font-family:inherit;font-size:12px;padding:9px 12px;outline:none;transition:all .2s;width:100%}
+.ffi:focus,.ffsel:focus,.ffta:focus{border-color:var(--a1);box-shadow:0 0 0 3px rgba(0,245,160,.08)}
+.ffi::placeholder,.ffta::placeholder{color:var(--t3)}.ffsel option{background:var(--s2)}.ffta{min-height:70px;resize:vertical}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+
+/* Toast */
+.toast-wrap{position:fixed;bottom:16px;right:16px;z-index:999;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.toast{background:var(--s2);border:1px solid var(--bd2);border-radius:10px;padding:10px 13px;display:flex;align-items:flex-start;gap:8px;font-size:12px;min-width:230px;max-width:310px;pointer-events:all;animation:toastIn .3s ease;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+@keyframes toastIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.t-icon{font-size:16px;flex-shrink:0}
+.t-title{font-weight:700;margin-bottom:1px}
+.t-sub{font-size:10px;color:var(--t3);font-family:monospace;line-height:1.4}
+
+/* Loading spinner */
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,0.2);border-top-color:var(--a1);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:880px){.shell{grid-template-columns:1fr}.sb{display:none}.stats-grid{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.kanban{grid-template-columns:1fr 1fr}.team-grid{grid-template-columns:1fr 1fr}.results-grid{grid-template-columns:1fr}}
+@media(max-width:650px){.lc{grid-template-columns:1fr}.ll{display:none}.tnav-center{display:none}.stats-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+
+<!-- ════════════════ LOGIN PAGE ════════════════ -->
+<div class="page" id="loginPage">
+<div id="lp-inner" style="min-height:100%;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;z-index:1">
+<div class="lc">
+
+<!-- LEFT -->
+<div class="ll">
+  <div>
+    <div class="ll-logo">
+      <div class="ll-logo-mark">🧠</div>
+      <div class="ll-logo-name">Neural<span>Bug</span></div>
+    </div>
+    <div class="ll-headline" id="llHeadline">AI-Powered<br>Bug <em>Detection</em></div>
+    <div class="typewriter" id="typewriter"></div>
+    <div class="scan-demo">
+      <div class="sd-card" style="border-left:3px solid var(--a3)">
+        <div class="sd-icon" style="background:rgba(255,107,107,.15)">🔴</div>
+        <div><div class="sd-label" style="color:var(--a3)">XSS Injection Found</div><div class="sd-cat">FRONTEND · Critical</div></div>
+        <div class="sd-bar"><span class="sd-conf">98%</span><div class="sd-dot" style="background:var(--a3)"></div></div>
+      </div>
+      <div class="sd-card" style="border-left:3px solid var(--a4)">
+        <div class="sd-icon" style="background:rgba(255,168,0,.15)">🟠</div>
+        <div><div class="sd-label" style="color:var(--a4)">API 500 on /checkout</div><div class="sd-cat">BACKEND · High</div></div>
+        <div class="sd-bar"><span class="sd-conf">91%</span><div class="sd-dot" style="background:var(--a4)"></div></div>
+      </div>
+      <div class="sd-card" style="border-left:3px solid var(--a2)">
+        <div class="sd-icon" style="background:rgba(0,212,255,.15)">🔵</div>
+        <div><div class="sd-label" style="color:var(--a2)">WCAG Contrast Fail</div><div class="sd-cat">UI/UX · Medium</div></div>
+        <div class="sd-bar"><span class="sd-conf">87%</span><div class="sd-dot" style="background:var(--a2)"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="ll-stats">
+    <div class="ls"><div class="ls-val" id="stat1">0</div><div class="ls-lbl">Bugs Fixed</div></div>
+    <div class="ls"><div class="ls-val" id="stat2">0%</div><div class="ls-lbl">Accuracy</div></div>
+    <div class="ls"><div class="ls-val" id="stat3">0ms</div><div class="ls-lbl">Avg Scan</div></div>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="lr">
+  <div class="ltabs">
+    <div class="ltab active" onclick="lTab('in')">Sign In</div>
+    <div class="ltab" onclick="lTab('up')">Register</div>
+    <div class="ltab" onclick="lTab('sso')">SSO</div>
+  </div>
+
+  <!-- SIGN IN -->
+  <div class="lf" id="fIn">
+    <div class="lf-title">Welcome back 👋</div>
+    <div class="lf-sub">// Select your authentication method</div>
+    <div class="method-grid">
+      <div class="method-btn active" id="m-email" onclick="setMethod('email')"><div class="method-icon" style="background:var(--s3)">✉️</div>EMAIL</div>
+      <div class="method-btn" id="m-google" onclick="setMethod('google')"><div class="method-icon mi-google">G</div>GOOGLE</div>
+      <div class="method-btn" id="m-github" onclick="setMethod('github')"><div class="method-icon mi-github" style="color:#fff;font-weight:700;font-size:14px">GH</div>GITHUB</div>
+      <div class="method-btn" id="m-ms" onclick="setMethod('ms')"><div class="method-icon mi-ms">⊞</div>MSFT</div>
+      <div class="method-btn" id="m-apple" onclick="setMethod('apple')"><div class="method-icon mi-apple" style="color:#fff;font-size:16px"></div>APPLE</div>
+      <div class="method-btn" id="m-magic" onclick="setMethod('magic')"><div class="method-icon mi-magic">🪄</div>MAGIC</div>
+      <div class="method-btn" id="m-bio" onclick="setMethod('bio')"><div class="method-icon mi-bio">👆</div>BIOMETRIC</div>
+      <div class="method-btn" id="m-sso" onclick="lTab('sso')"><div class="method-icon mi-sso" style="color:#fff;font-size:10px;font-weight:700">SSO</div>SAML</div>
+    </div>
+
+    <!-- Email form -->
+    <div id="method-email">
+      <div class="alert-err" id="loginErr">Invalid credentials. Try: admin@neuralbug.io / admin123</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:2px">
+        <div class="fg"><label class="fl">Email</label><input class="fi" id="lemail" type="email" value="admin@neuralbug.io" placeholder="you@company.com"/></div>
+        <div class="fg"><label class="fl">Password</label>
+          <div class="fi-wrap"><input class="fi" id="lpwd" type="password" value="admin123" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/><span class="fi-eye" onclick="togglePwd('lpwd',this)">👁</span></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <label class="fcheck"><input type="checkbox" checked/> Remember me</label>
+          <span class="forgot-link" onclick="lTab('forgot')">Forgot password?</span>
+        </div>
+        <button class="btn-lg" id="loginBtn" onclick="doLogin()">Sign In to NeuralBug →</button>
+      </div>
+    </div>
+
+    <!-- Magic link -->
+    <div id="method-magic" style="display:none;flex-direction:column;gap:10px">
+      <div class="fg"><label class="fl">Email</label><input class="fi" id="magic-email" type="email" placeholder="you@company.com"/></div>
+      <button class="btn-lg" onclick="doMagicLink()">Send Magic Link ✨</button>
+      <div class="alert-ok" id="magicOk">✉️ Magic link sent! Check your inbox.</div>
+    </div>
+
+    <!-- Biometric -->
+    <div id="method-bio" style="display:none">
+      <div class="bio-wrap">
+        <div class="bio-ring" id="bioRing">👆</div>
+        <div style="font-size:13px;font-weight:600;color:var(--a1)" id="bioStatus">Touch to authenticate</div>
+        <div style="font-size:11px;color:var(--t3);font-family:monospace">Fingerprint / Face ID / Device PIN</div>
+        <button class="btn-lg" style="width:200px;margin-top:8px" onclick="doBiometric()">Authenticate</button>
+      </div>
+    </div>
+
+    <!-- OAuth placeholder -->
+    <div id="method-oauth" style="display:none;flex-direction:column;gap:10px">
+      <div style="background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:20px;text-align:center">
+        <div style="font-size:32px;margin-bottom:8px" id="oauthIcon">🔵</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px" id="oauthName">Connecting...</div>
+        <div style="font-size:11px;color:var(--t3);font-family:monospace">Redirecting to OAuth provider</div>
+      </div>
+      <button class="btn-lg" onclick="doOAuth()">Continue with <span id="oauthProvider">Google</span> →</button>
+    </div>
+  </div>
+
+  <!-- REGISTER -->
+  <div class="lf hidden" id="fUp">
+    <div class="lf-title">Create account ✨</div>
+    <div class="lf-sub">// Step <span id="regStepNum">1</span> of 2</div>
+    <div class="steps">
+      <div class="step active" id="rs1">1</div><div class="step-line" id="rl1"></div>
+      <div class="step" id="rs2">2</div>
+    </div>
+    <div class="alert-ok" id="regOk">Account created! Signing you in…</div>
+    <!-- Step 1 -->
+    <div id="reg-step1" style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="fg"><label class="fl">First Name</label><input class="fi" id="rfirst" placeholder="Arjun"/></div>
+        <div class="fg"><label class="fl">Last Name</label><input class="fi" id="rlast" placeholder="Mehta"/></div>
+      </div>
+      <div class="fg"><label class="fl">Work Email</label><input class="fi" id="remail" type="email" placeholder="you@company.com"/></div>
+      <div class="fg"><label class="fl">Role</label><select class="fi fsel" id="rrole"><option>Developer</option><option>QA Engineer</option><option>Team Lead</option><option>DevOps</option><option>Project Manager</option></select></div>
+      <button class="btn-lg" onclick="regNext()">Next Step →</button>
+    </div>
+    <!-- Step 2 -->
+    <div id="reg-step2" style="display:none;flex-direction:column;gap:10px">
+      <div class="fg"><label class="fl">Password</label>
+        <div class="fi-wrap"><input class="fi" id="rpwd" type="password" placeholder="Min 8 characters"/><span class="fi-eye" onclick="togglePwd('rpwd',this)">👁</span></div>
+      </div>
+      <div class="fg"><label class="fl">Confirm Password</label><input class="fi" id="rpwd2" type="password" placeholder="Repeat password"/></div>
+      <label class="fcheck"><input type="checkbox" id="rterms"/> I agree to <span style="color:var(--a2)">Terms &amp; Privacy Policy</span></label>
+      <button class="btn-lg" onclick="doRegister()">Create Account 🚀</button>
+      <button class="btn-social" onclick="regBack()">← Back</button>
+    </div>
+  </div>
+
+  <!-- SSO -->
+  <div class="lf hidden" id="fSso">
+    <div class="lf-title">SSO / SAML Login 🔐</div>
+    <div class="lf-sub">// Enterprise single sign-on</div>
+    <div class="fg"><label class="fl">Company Domain</label><input class="fi" id="ssoDomain" placeholder="yourcompany.com"/></div>
+    <div class="fg"><label class="fl">Identity Provider</label>
+      <select class="fi fsel" id="ssoIdp"><option>Okta</option><option>Azure AD</option><option>Google Workspace</option><option>OneLogin</option><option>Ping Identity</option><option>Auth0</option></select>
+    </div>
+    <button class="btn-lg" onclick="doSSO()">Connect SSO Provider →</button>
+    <div class="fdiv">or use direct links</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+      <button class="btn-social" onclick="toast('🔵','Okta','Redirecting to Okta...')">🔒 Okta</button>
+      <button class="btn-social" onclick="toast('🔵','Azure AD','Redirecting to Azure AD...')">⊞ Azure AD</button>
+      <button class="btn-social" onclick="toast('🔵','Google WS','Redirecting to Google Workspace...')">G Google WS</button>
+      <button class="btn-social" onclick="toast('🔵','OneLogin','Redirecting to OneLogin...')">🔑 OneLogin</button>
+    </div>
+  </div>
+
+  <!-- FORGOT PASSWORD (3-step) -->
+  <div class="lf hidden" id="fForgot">
+    <div class="lf-title">Reset Password 🔑</div>
+    <div class="lf-sub">// Step <span id="fgStepNum">1</span> of 3</div>
+    <div class="steps">
+      <div class="step active" id="fs1">1</div><div class="step-line" id="fl1"></div>
+      <div class="step" id="fs2">2</div><div class="step-line" id="fl2"></div>
+      <div class="step" id="fs3">3</div>
+    </div>
+    <!-- Step 1: Email -->
+    <div id="fg1" style="display:flex;flex-direction:column;gap:10px">
+      <div class="fg"><label class="fl">Work Email</label><input class="fi" id="fg-email" type="email" placeholder="you@company.com"/></div>
+      <button class="btn-lg" onclick="fgStep1()">Send OTP Code →</button>
+      <div style="text-align:center"><span class="forgot-link" onclick="lTab('in')">← Back to Sign In</span></div>
+    </div>
+    <!-- Step 2: OTP -->
+    <div id="fg2" style="display:none;flex-direction:column;gap:12px">
+      <div style="font-size:12px;color:var(--t2);font-family:monospace">Enter the 6-digit code sent to <span id="fgEmailShow" style="color:var(--a1)">you@company.com</span></div>
+      <div class="otp-row" id="otpRow">
+        <input class="otp-box" maxlength="1" oninput="otpNext(this,0)" onkeydown="otpBack(event,0)"/>
+        <input class="otp-box" maxlength="1" oninput="otpNext(this,1)" onkeydown="otpBack(event,1)"/>
+        <input class="otp-box" maxlength="1" oninput="otpNext(this,2)" onkeydown="otpBack(event,2)"/>
+        <input class="otp-box" maxlength="1" oninput="otpNext(this,3)" onkeydown="otpBack(event,3)"/>
+        <input class="otp-box" maxlength="1" oninput="otpNext(this,4)" onkeydown="otpBack(event,4)"/>
+        <input class="otp-box" maxlength="1" oninput="otpNext(this,5)" onkeydown="otpBack(event,5)"/>
+      </div>
+      <div style="font-size:11px;color:var(--t3);font-family:monospace">Hint: try <span style="color:var(--a1)">123456</span></div>
+      <button class="btn-lg" onclick="fgStep2()">Verify Code →</button>
+    </div>
+    <!-- Step 3: New Password -->
+    <div id="fg3" style="display:none;flex-direction:column;gap:10px">
+      <div class="fg"><label class="fl">New Password</label>
+        <div class="fi-wrap"><input class="fi" id="fg-pwd1" type="password" placeholder="Min 8 chars"/><span class="fi-eye" onclick="togglePwd('fg-pwd1',this)">👁</span></div>
+      </div>
+      <div class="fg"><label class="fl">Confirm Password</label>
+        <div class="fi-wrap"><input class="fi" id="fg-pwd2" type="password" placeholder="Repeat password"/><span class="fi-eye" onclick="togglePwd('fg-pwd2',this)">👁</span></div>
+      </div>
+      <button class="btn-lg" onclick="fgStep3()">Reset Password ✓</button>
+    </div>
+  </div>
+
+</div><!-- end lr -->
+</div>
+</div>
+</div>
+
+<!-- ════════════════ APP PAGE ════════════════ -->
+<div class="page hidden" id="appPage" style="display:flex;flex-direction:column">
+
+<nav class="tnav">
+  <div class="tnav-brand"><div class="tnav-icon">🧠</div>Neural<span style="color:var(--a1)">Bug</span></div>
+  <div class="tnav-center">
+    <button class="nb active" onclick="navTo('dashboard',this)">Dashboard</button>
+    <button class="nb" onclick="navTo('scanner',this)">🔍 Scanner</button>
+    <button class="nb" onclick="navTo('bugs',this)">Bugs</button>
+    <button class="nb" onclick="navTo('sprint',this)">Sprint</button>
+    <button class="nb" onclick="navTo('analytics',this)">Analytics</button>
+    <button class="nb" onclick="navTo('team',this)">Team</button>
+    <button class="nb" onclick="navTo('notifications',this)">Notifs</button>
+    <button class="nb" onclick="navTo('settings',this)">Settings</button>
+  </div>
+  <div class="tnav-right">
+    <div class="nav-notif" onclick="navTo('notifications',null)">🔔<div class="nbadge" id="nbadge">5</div></div>
+    <div class="nav-user" onclick="toggleDD()">
+      <div class="uav" id="navAv" style="background:rgba(0,245,160,.15);color:var(--a1)">AM</div>
+      <div class="uname" id="navName">Arjun M.</div>
+      <span style="color:var(--t3);font-size:10px">▾</span>
+      <div class="udd" id="userDD">
+        <div class="ddi">👤 Profile</div>
+        <div class="ddi" onclick="navTo('settings',null)">⚙️ Settings</div>
+        <div class="ddi-sep"></div>
+        <div class="ddi" onclick="doLogout()">🚪 Sign Out</div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="shell">
+<aside class="sb">
+  <div class="sb-sec">Workspace</div>
+  <div class="sb-item active" onclick="sideNav('dashboard',this)"><span class="sb-ico">⬡</span>Dashboard</div>
+  <div class="sb-item" onclick="sideNav('scanner',this)"><span class="sb-ico">🔍</span>Bug Scanner<span class="sb-badge w">NEW</span></div>
+  <div class="sb-item" onclick="sideNav('bugs',this)"><span class="sb-ico">🐛</span>All Bugs<span class="sb-badge d" id="sbCount">7</span></div>
+  <div class="sb-item" onclick="sideNav('sprint',this)"><span class="sb-ico">⚡</span>Sprint Board</div>
+  <div class="sb-sec">Projects</div>
+  <div class="sb-item" onclick="projFilter('Auth Service',this)"><span class="sb-ico">🟢</span>Auth Service</div>
+  <div class="sb-item" onclick="projFilter('Core API',this)"><span class="sb-ico">🔵</span>Core API</div>
+  <div class="sb-item" onclick="projFilter('Frontend',this)"><span class="sb-ico">🟣</span>Frontend</div>
+  <div class="sb-item" onclick="projFilter('Mobile App',this)"><span class="sb-ico">🟠</span>Mobile App</div>
+  <div class="sb-sec">Reports</div>
+  <div class="sb-item" onclick="sideNav('analytics',this)"><span class="sb-ico">📊</span>Analytics</div>
+  <div class="sb-item" onclick="sideNav('notifications',this)"><span class="sb-ico">🔔</span>Notifications<span class="sb-badge w">5</span></div>
+  <div class="sb-item" onclick="sideNav('settings',this)"><span class="sb-ico">⚙️</span>Settings</div>
+  <div class="ai-panel">
+    <div class="aip-title"><span class="pulse"></span>AI Engine</div>
+    <div class="aip-row"><span class="aip-k">Model</span><span class="aip-v">claude-sonnet-4</span></div>
+    <div class="aip-row"><span class="aip-k">Scans today</span><span class="aip-v" style="color:var(--a1)">14</span></div>
+    <div class="aip-row"><span class="aip-k">Accuracy</span><span class="aip-v">96.4%</span></div>
+    <div class="aip-row"><span class="aip-k">Queue</span><span class="aip-v" style="color:var(--a4)">7 pending</span></div>
+  </div>
+</aside>
+
+<main class="main">
+
+<!-- ── DASHBOARD ── -->
+<div class="view active" id="view-dashboard">
+  <div class="ph">
+    <div class="ph-l"><h1>Bug <span>Dashboard</span></h1><p>// AI-enhanced · real-time · Apr 2026</p></div>
+    <div class="ph-r">
+      <button class="btn btn-ghost" onclick="exportCSV()">⬇ Export</button>
+      <button class="btn btn-scan" onclick="navTo('scanner',null)">🔍 Open Scanner</button>
+      <button class="btn btn-primary" onclick="openNewBug()">+ New Bug</button>
+    </div>
+  </div>
+  <div class="ai-bar"><span style="font-size:16px">🤖</span><input id="aiQ" placeholder='Ask AI: "show critical bugs" or "what needs fixing today"…' onkeydown="if(event.key==='Enter')runAI()"/><button class="ai-send" onclick="runAI()">➤</button></div>
+  <div class="stats-grid">
+    <div class="sc c-red"><div class="sc-lbl">Critical Bugs</div><div class="sc-val">3</div><div class="sc-delta">↑2 from yesterday</div></div>
+    <div class="sc c-yellow"><div class="sc-lbl">Open Issues</div><div class="sc-val" id="statOpen">7</div><div class="sc-delta">↓5 this week</div></div>
+    <div class="sc c-blue"><div class="sc-lbl">AI Scanned</div><div class="sc-val">42</div><div class="sc-delta">↑8 today</div></div>
+    <div class="sc c-green"><div class="sc-lbl">Resolution Rate</div><div class="sc-val">87%</div><div class="sc-delta">↑12% this month</div></div>
+  </div>
+  <!-- Scanner quick-launch -->
+  <div class="scanner-hero">
+    <div class="scanner-hd">
+      <div class="scanner-hd-l">🔍 AI Bug Scanner <span class="scanner-badge">LIVE</span></div>
+      <button class="btn btn-scan btn-sm" onclick="navTo('scanner',null)">Full Scanner →</button>
+    </div>
+    <div style="padding:14px 18px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="navTo('scanner',null);setScTab('url')">🌐 Scan URL</button>
+      <button class="btn btn-ghost" onclick="navTo('scanner',null);setScTab('pdf')">📄 Scan PDF</button>
+      <button class="btn btn-ghost" onclick="navTo('scanner',null);setScTab('img')">🖼 Scan Screenshot</button>
+      <button class="btn btn-ghost" onclick="navTo('scanner',null);setScTab('manual')">✍️ Manual Input</button>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-hd-l">Recent Bugs <span class="ptag tg">AI Triaged</span></div><button class="btn btn-ghost btn-sm" onclick="navTo('bugs',null)">All →</button></div>
+      <div class="fbar">
+        <div class="sw"><span>🔍</span><input placeholder="Search…" oninput="dashQ=this.value;renderDash()"/></div>
+        <div class="fchip active" onclick="dashF='all';renderDash();setChip(this,this.parentNode)">All</div>
+        <div class="fchip" onclick="dashF='critical';renderDash();setChip(this,this.parentNode)">Critical</div>
+        <div class="fchip" onclick="dashF='high';renderDash();setChip(this,this.parentNode)">High</div>
+      </div>
+      <table class="btbl"><thead><tr><th>ID</th><th>Bug / Component</th><th>Severity</th><th>Status</th><th>Conf.</th><th>Assignee</th></tr></thead><tbody id="dashBody"></tbody></table>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="panel">
+        <div class="panel-hd"><div class="panel-hd-l">Weekly Overview</div></div>
+        <div style="padding:12px"><div class="bc-wrap" id="weekChart"></div><div style="display:flex;gap:4px;margin-top:4px" id="weekLabels"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-hd"><div class="panel-hd-l">🤖 AI Insights <span class="ptag tb">Live</span></div></div>
+        <div style="padding:10px;display:flex;flex-direction:column;gap:7px">
+          <div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:9px 11px;cursor:pointer;transition:border-color .2s" onclick="toast('🔍','Pattern','Memory leak in auth — 3 bugs share same root')">
+            <div style="font-size:11px;font-weight:700;margin-bottom:2px">Pattern Detected</div>
+            <div style="font-size:10px;color:var(--t3);font-family:monospace">Memory leak in auth — 3 bugs, same root</div>
+          </div>
+          <div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:9px 11px;cursor:pointer;transition:border-color .2s" onclick="toast('⚡','Auto-fix','Payment retry — 94% confidence patch ready')">
+            <div style="font-size:11px;font-weight:700;margin-bottom:2px">Auto-fix Ready</div>
+            <div style="font-size:10px;color:var(--t3);font-family:monospace">Payment retry — 94% confidence</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-hd"><div class="panel-hd-l">Live Activity</div><button class="btn btn-ghost btn-sm" onclick="activities=[];renderAct()">Clear</button></div>
+    <div class="act-list" id="actFeed"></div>
+  </div>
+</div>
+
+<!-- ── SCANNER ── -->
+<div class="view" id="view-scanner">
+  <div class="ph">
+    <div class="ph-l"><h1>AI Bug <span>Scanner</span></h1><p>// Real-time analysis via URL · PDF · Screenshot · Manual</p></div>
+    <div class="ph-r">
+      <button class="btn btn-ghost" onclick="clearResults()">🗑 Clear Results</button>
+    </div>
+  </div>
+  <div class="scanner-hero">
+    <div class="scanner-hd">
+      <div class="scanner-hd-l">🔍 Automated Bug Detection <span class="scanner-badge">CLAUDE AI</span></div>
+      <div style="display:flex;gap:6px">
+        <div class="cat-chip all active" onclick="setCat('all',this)">All Categories</div>
+        <div class="cat-chip fe" onclick="setCat('frontend',this)">🌐 Frontend</div>
+        <div class="cat-chip be" onclick="setCat('backend',this)">⚙️ Backend</div>
+        <div class="cat-chip ux" onclick="setCat('uiux',this)">🎨 UI/UX</div>
+        <div class="cat-chip sys" onclick="setCat('system',this)">🖥 System</div>
+      </div>
+    </div>
+    <div class="scanner-tabs">
+      <div class="stab active" id="stab-url" onclick="setScTab('url')">🌐 URL / Link</div>
+      <div class="stab" id="stab-pdf" onclick="setScTab('pdf')">📄 PDF Document</div>
+      <div class="stab" id="stab-img" onclick="setScTab('img')">🖼 Screenshot</div>
+      <div class="stab" id="stab-manual" onclick="setScTab('manual')">✍️ Manual Input</div>
+    </div>
+    <div class="scanner-body">
+
+      <!-- URL -->
+      <div id="sc-url">
+        <div style="font-size:12px;color:var(--t2);margin-bottom:8px">Enter any URL — AI will browse, analyze and detect bugs across Frontend, Backend, UI/UX &amp; System layers</div>
+        <div class="url-input-wrap">
+          <input class="url-inp" id="urlInp" placeholder="https://your-app.com or https://api.example.com/endpoint" onkeydown="if(event.key==='Enter')startScan()"/>
+          <button class="btn btn-scan" onclick="startScan()" id="scanBtn" style="padding:10px 18px">🔍 Scan Now</button>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-xs" onclick="document.getElementById('urlInp').value='https://github.com'">github.com</button>
+          <button class="btn btn-ghost btn-xs" onclick="document.getElementById('urlInp').value='https://www.google.com'">google.com</button>
+          <button class="btn btn-ghost btn-xs" onclick="document.getElementById('urlInp').value='https://stackoverflow.com'">stackoverflow.com</button>
+          <button class="btn btn-ghost btn-xs" onclick="document.getElementById('urlInp').value='https://react.dev'">react.dev</button>
+        </div>
+      </div>
+
+      <!-- PDF -->
+      <div id="sc-pdf" style="display:none">
+        <div style="font-size:12px;color:var(--t2);margin-bottom:8px">Upload a PDF (error report, test results, spec doc) — AI will extract and analyze for bugs</div>
+        <div class="dropzone" id="pdfZone" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event,'pdf')">
+          <input type="file" accept=".pdf" onchange="handleFile(this,'pdf')" id="pdfInput"/>
+          <div class="dz-icon">📄</div>
+          <div class="dz-title">Drop PDF here or click to browse</div>
+          <div class="dz-sub">Supports: error logs · test reports · API docs · bug reports</div>
+          <div class="dz-file" id="pdfFile"></div>
+        </div>
+        <button class="btn btn-scan" style="width:100%;margin-top:8px" onclick="startScan()" id="pdfScanBtn" disabled>📄 Analyze PDF</button>
+      </div>
+
+      <!-- Screenshot -->
+      <div id="sc-img" style="display:none">
+        <div style="font-size:12px;color:var(--t2);margin-bottom:8px">Upload a screenshot or paste (Ctrl+V) — AI will detect visual bugs, layout issues, UI/UX problems</div>
+        <div class="dropzone" id="imgZone" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event,'img')">
+          <input type="file" accept="image/*" onchange="handleFile(this,'img')" id="imgInput"/>
+          <div class="dz-icon">🖼</div>
+          <div class="dz-title">Drop screenshot here or click to browse</div>
+          <div class="dz-sub">Supports: PNG · JPG · WebP · GIF · BMP · also Ctrl+V to paste</div>
+          <div class="dz-file" id="imgFile"></div>
+        </div>
+        <div id="imgPreviewWrap" style="display:none;margin-top:8px"><img id="imgPreview" style="max-height:180px;border-radius:8px;border:1px solid var(--bd);object-fit:contain;width:100%"/></div>
+        <button class="btn btn-scan" style="width:100%;margin-top:8px" onclick="startScan()" id="imgScanBtn" disabled>🖼 Analyze Screenshot</button>
+      </div>
+
+      <!-- Manual -->
+      <div id="sc-manual" style="display:none;flex-direction:column;gap:10px">
+        <div style="font-size:12px;color:var(--t2)">Describe a bug, paste error logs, or enter code snippet — AI will diagnose and categorize</div>
+        <div class="fg"><label class="fl">Error Description / Stack Trace / Code</label><textarea class="ffi ffta" id="manualInput" placeholder="Paste your error message, stack trace, or describe the bug here...&#10;&#10;Example:&#10;TypeError: Cannot read property 'map' of undefined&#10;  at UserList.render (UserList.jsx:42)&#10;  at processChild (/node_modules/react-dom/cjs/react-dom.development.js:3990)" style="min-height:140px;font-family:monospace;font-size:11px"></textarea></div>
+        <div class="fg"><label class="fl">Context (optional)</label><input class="ffi" id="manualCtx" placeholder="e.g. React 18, Node.js backend, Production environment"/></div>
+        <button class="btn btn-scan" onclick="startScan()" id="manualScanBtn">🤖 Diagnose Bug</button>
+      </div>
+
+      <!-- Scanning animation -->
+      <div class="scanning-anim" id="scanningAnim">
+        <div class="radar-wrap">
+          <div class="radar-ring"></div><div class="radar-ring"></div><div class="radar-ring"></div>
+          <div class="radar-sweep"></div><div class="radar-dot"></div>
+        </div>
+        <div class="scan-label" id="scanLabel">Initializing AI scanner…</div>
+        <div class="scan-progress"><div class="scan-fill" id="scanFill"></div></div>
+        <div style="font-size:10px;color:var(--t3);font-family:monospace" id="scanSub">Connecting to Claude AI…</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="scanResults" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:14px;font-weight:700">Scan Results <span id="resultCount" style="color:var(--a5);font-family:monospace;font-size:12px"></span></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="addAllToTracker()">+ Add All to Tracker</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportResults()">⬇ Export</button>
+      </div>
+    </div>
+    <div class="results-grid" id="resultsGrid"></div>
+  </div>
+</div>
+
+<!-- ── BUGS ── -->
+<div class="view" id="view-bugs">
+  <div class="ph">
+    <div class="ph-l"><h1>All <span>Bugs</span></h1><p>// Complete registry · AI-triaged</p></div>
+    <div class="ph-r">
+      <button class="btn btn-ghost" onclick="exportCSV()">⬇ Export</button>
+      <button class="btn btn-scan btn-sm" onclick="navTo('scanner',null)">🔍 Scan</button>
+      <button class="btn btn-primary" onclick="openNewBug()">+ Report Bug</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="tabs-row" id="bugTabs">
+      <div class="tab active" onclick="setTab('open',this)">Open</div>
+      <div class="tab" onclick="setTab('ai-fixing',this)">AI Fixing</div>
+      <div class="tab" onclick="setTab('in-progress',this)">In Progress</div>
+      <div class="tab" onclick="setTab('review',this)">Review</div>
+      <div class="tab" onclick="setTab('resolved',this)">Resolved</div>
+    </div>
+    <div class="fbar">
+      <div class="sw" style="flex:2"><span>🔍</span><input id="bugQ" placeholder="Search…" oninput="renderBugs()"/></div>
+      <div class="fchip active" data-sev="all" onclick="setSev('all',this)">All</div>
+      <div class="fchip" data-sev="critical" onclick="setSev('critical',this)">Critical</div>
+      <div class="fchip" data-sev="high" onclick="setSev('high',this)">High</div>
+      <div class="fchip" data-sev="medium" onclick="setSev('medium',this)">Medium</div>
+      <div class="fchip" data-sev="low" onclick="setSev('low',this)">Low</div>
+    </div>
+    <table class="btbl"><thead><tr><th><input type="checkbox" onclick="document.querySelectorAll('.rck').forEach(c=>c.checked=this.checked)" style="accent-color:var(--a1)"/></th><th>ID</th><th>Bug</th><th>Sev</th><th>Status</th><th>Source</th><th>Conf.</th><th>Assignee</th><th></th></tr></thead><tbody id="bugBody"></tbody></table>
+  </div>
+</div>
+
+<!-- ── SPRINT ── -->
+<div class="view" id="view-sprint">
+  <div class="ph"><div class="ph-l"><h1>Sprint <span>Board</span></h1><p>// Sprint 14 · Apr 01–15, 2026</p></div><div class="ph-r"><button class="btn btn-primary" onclick="openNewBug()">+ Add Bug</button></div></div>
+  <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="sc c-green"><div class="sc-lbl">Progress</div><div class="sc-val">68%</div><div class="sc-delta">↑12% this week</div></div>
+    <div class="sc c-yellow"><div class="sc-lbl">Days Left</div><div class="sc-val">10</div><div class="sc-delta">Deadline Apr 15</div></div>
+    <div class="sc c-blue"><div class="sc-lbl">Story Points</div><div class="sc-val">34/50</div></div>
+  </div>
+  <div class="kanban" id="kanbanBoard"></div>
+</div>
+
+<!-- ── ANALYTICS ── -->
+<div class="view" id="view-analytics">
+  <div class="ph"><div class="ph-l"><h1>Bug <span>Analytics</span></h1><p>// AI detection trends & patterns</p></div><div class="ph-r"><button class="btn btn-ghost" onclick="exportCSV()">⬇ Export</button></div></div>
+  <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="sc c-green"><div class="sc-lbl">Resolution Rate</div><div class="sc-val">87%</div></div>
+    <div class="sc c-blue"><div class="sc-lbl">Avg Fix Time</div><div class="sc-val">3.2s</div></div>
+    <div class="sc c-purple"><div class="sc-lbl">AI Accuracy</div><div class="sc-val">96%</div></div>
+  </div>
+  <div class="grid2">
+    <div class="panel"><div class="panel-hd"><div class="panel-hd-l">Bug Heatmap</div></div>
+      <div style="padding:12px">
+        <div style="display:flex;justify-content:space-between;font-family:monospace;font-size:8px;color:var(--t3);margin-bottom:5px"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+        <div class="heatmap" id="heatmap"></div>
+      </div>
+    </div>
+    <div class="panel"><div class="panel-hd"><div class="panel-hd-l">By Severity</div></div>
+      <div style="padding:14px">
+        <div class="pb-wrap"><div class="pb-lbl"><span>🔴 Critical</span><span>3</span></div><div class="pb-track"><div class="pb-fill" style="width:12%;background:var(--a3)"></div></div></div>
+        <div class="pb-wrap"><div class="pb-lbl"><span>🟠 High</span><span>8</span></div><div class="pb-track"><div class="pb-fill" style="width:33%;background:var(--a4)"></div></div></div>
+        <div class="pb-wrap"><div class="pb-lbl"><span>🔵 Medium</span><span>10</span></div><div class="pb-track"><div class="pb-fill" style="width:42%;background:var(--a2)"></div></div></div>
+        <div class="pb-wrap"><div class="pb-lbl"><span>🟢 Low</span><span>3</span></div><div class="pb-track"><div class="pb-fill" style="width:12%;background:var(--a1)"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TEAM ── -->
+<div class="view" id="view-team">
+  <div class="ph"><div class="ph-l"><h1><span>Team</span> Members</h1></div></div>
+  <div class="team-grid" id="teamGrid"></div>
+</div>
+
+<!-- ── NOTIFICATIONS ── -->
+<div class="view" id="view-notifications">
+  <div class="ph"><div class="ph-l"><h1><span>Notifications</span></h1></div><div class="ph-r"><button class="btn btn-ghost btn-sm" onclick="markAllRead()">Mark all read</button></div></div>
+  <div class="panel"><div class="tabs-row"><div class="tab active" onclick="nTab('all',this)">All</div><div class="tab" onclick="nTab('critical',this)">Critical</div><div class="tab" onclick="nTab('ai',this)">AI Alerts</div></div><div id="notifList"></div></div>
+</div>
+
+<!-- ── SETTINGS ── -->
+<div class="view" id="view-settings">
+  <div class="ph"><div class="ph-l"><h1><span>Settings</span></h1></div></div>
+  <div class="tabs-row" style="margin-bottom:12px">
+    <div class="tab active" onclick="stab('general',this)">General</div>
+    <div class="tab" onclick="stab('ai',this)">AI Config</div>
+    <div class="tab" onclick="stab('notifications',this)">Notifications</div>
+    <div class="tab" onclick="stab('security',this)">Security</div>
+  </div>
+  <div id="settingsBody"></div>
+</div>
+
+</main>
+</div>
+</div>
+
+<!-- BUG DETAIL MODAL -->
+<div class="modal-ov" id="bugModal" onclick="if(event.target===this)closeM('bugModal')">
+  <div class="modal">
+    <div class="modal-hd">
+      <div><div class="modal-id" id="mId">BUG-001</div><div class="modal-title" id="mTitle">Bug Title</div></div>
+      <button class="modal-close" onclick="closeM('bugModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div><div class="sec-t">Metadata</div><div class="meta-grid" id="mMeta"></div></div>
+      <div><div class="sec-t">Description</div><p style="font-size:12px;color:var(--t2);line-height:1.7;font-family:monospace" id="mDesc"></p></div>
+      <div><div class="sec-t">Stack Trace</div><div class="code-blk" id="mStack"></div></div>
+      <div class="ai-box">
+        <div class="ai-box-hd"><span class="ai-chip">🤖 AI ANALYSIS</span><span class="ai-conf" id="mConf">92%</span></div>
+        <div class="ai-text" id="mAI"></div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-primary btn-sm" onclick="applyFix()">⚡ Apply Fix</button>
+          <button class="btn btn-ghost btn-sm" onclick="closeM('bugModal')">Dismiss</button>
+          <button class="btn btn-warn btn-sm" onclick="escalate()">⚠️ Escalate</button>
+        </div>
+      </div>
+      <div><div class="sec-t">Timeline</div><div id="mTimeline"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- NEW BUG MODAL -->
+<div class="modal-ov" id="newModal" onclick="if(event.target===this)closeM('newModal')">
+  <div class="modal">
+    <div class="modal-hd"><div class="modal-title">Report New Bug</div><button class="modal-close" onclick="closeM('newModal')">✕</button></div>
+    <div class="modal-body">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="fg"><label class="fl">Bug Title *</label><input class="ffi" id="nbTitle" placeholder="e.g. Login fails with 500 error"/></div>
+        <div class="fg-row">
+          <div class="fg"><label class="fl">Severity</label><select class="ffsel" id="nbSev"><option value="critical">🔴 Critical</option><option value="high">🟠 High</option><option value="medium" selected>🔵 Medium</option><option value="low">🟢 Low</option></select></div>
+          <div class="fg"><label class="fl">Component</label><select class="ffsel" id="nbComp"><option>Auth Service</option><option>Core API</option><option>Frontend</option><option>Mobile App</option><option>Database</option><option>Payment Gateway</option></select></div>
+        </div>
+        <div class="fg-row">
+          <div class="fg"><label class="fl">Assignee</label><select class="ffsel" id="nbAssign"><option>— Unassigned —</option><option>Arjun Mehta</option><option>Priya Sharma</option><option>Rohan Verma</option><option>Neha Kapoor</option></select></div>
+          <div class="fg"><label class="fl">Category</label><select class="ffsel" id="nbCat"><option>Frontend</option><option>Backend</option><option>UI/UX</option><option>System</option></select></div>
+        </div>
+        <div class="fg"><label class="fl">Description</label><textarea class="ffta" id="nbDesc" placeholder="Steps to reproduce, expected vs actual…"></textarea></div>
+      </div>
+      <div style="display:flex;gap:7px;justify-content:flex-end;margin-top:8px">
+        <button class="btn btn-ghost" onclick="closeM('newModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitBug()">Submit + AI Triage 🤖</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  CANVAS ANIMATION — Neural Network Particles
+// ═══════════════════════════════════════════════════
+const canvas = document.getElementById('bgCanvas');
+const ctx = canvas.getContext('2d');
+let pts = [], W, H;
+
+function initCanvas() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  pts = [];
+  const n = Math.min(80, Math.floor(W*H/14000));
+  for (let i=0; i<n; i++) pts.push({
+    x: Math.random()*W, y: Math.random()*H,
+    vx: (Math.random()-.5)*.4, vy: (Math.random()-.5)*.4,
+    r: Math.random()*2+1,
+    c: ['#00f5a0','#00d4ff','#a855f7','#f472b6'][Math.floor(Math.random()*4)],
+    a: Math.random()*.5+.15
+  });
+}
+function drawCanvas() {
+  ctx.clearRect(0,0,W,H);
+  // Connections
+  for (let i=0; i<pts.length; i++) for (let j=i+1; j<pts.length; j++) {
+    const dx=pts[i].x-pts[j].x, dy=pts[i].y-pts[j].y;
+    const d=Math.sqrt(dx*dx+dy*dy);
+    if (d<130) {
+      ctx.beginPath();
+      ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);
+      ctx.strokeStyle=`rgba(0,245,160,${.06*(1-d/130)})`;
+      ctx.lineWidth=.5;ctx.stroke();
+    }
+  }
+  // Nodes
+  pts.forEach(p => {
+    p.x+=p.vx; p.y+=p.vy;
+    if(p.x<0||p.x>W)p.vx*=-1;
+    if(p.y<0||p.y>H)p.vy*=-1;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle=p.c+Math.floor(p.a*255).toString(16).padStart(2,'0');
+    ctx.fill();
+  });
+  requestAnimationFrame(drawCanvas);
+}
+window.addEventListener('resize',initCanvas);
+initCanvas(); drawCanvas();
+
+// ═══════════════════════════════════════════════════
+//  TYPEWRITER
+// ═══════════════════════════════════════════════════
+const phrases=['// Scanning for vulnerabilities...','// Analyzing frontend patterns...','// Detecting API anomalies...','// Checking WCAG compliance...','// Running AI diagnostics...','// Monitoring system health...'];
+let twI=0,twC=0,twDir=1;
+const twEl=document.getElementById('typewriter');
+function typeLoop(){
+  if(!twEl)return;
+  const s=phrases[twI];
+  if(twDir===1){twC++;if(twC>=s.length)setTimeout(()=>twDir=-1,1500)}
+  else{twC--;if(twC<=0){twI=(twI+1)%phrases.length;twDir=1}}
+  twEl.textContent=s.slice(0,twC);
+  setTimeout(typeLoop,twDir===1?60:35);
+}
+typeLoop();
+
+// Counter animation
+function animateCounter(id,target,suffix='',duration=2000){
+  const el=document.getElementById(id);if(!el)return;
+  const start=Date.now();
+  const tick=()=>{
+    const p=Math.min(1,(Date.now()-start)/duration);
+    const val=Math.floor(p*target);
+    el.textContent=val+suffix;
+    if(p<1)requestAnimationFrame(tick);
+  };tick();
+}
+setTimeout(()=>{animateCounter('stat1',14287,'');animateCounter('stat2',96,'%',1500);animateCounter('stat3',3200,'ms',1800)},500);
+
+// ═══════════════════════════════════════════════════
+//  LOGIN STATE & FUNCTIONS
+// ═══════════════════════════════════════════════════
+let currentUser=null, activeMethod='email';
+
+function lTab(t){
+  document.querySelectorAll('.ltab').forEach(e=>e.classList.remove('active'));
+  ['fIn','fUp','fSso','fForgot'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+  const map={in:['fIn',0],up:['fUp',1],sso:['fSso',2],forgot:['fForgot',-1]};
+  const [fid,ti]=map[t]||['fIn',0];
+  document.getElementById(fid).classList.remove('hidden');
+  if(ti>=0)document.querySelectorAll('.ltab')[ti].classList.add('active');
+}
+
+function setMethod(m){
+  activeMethod=m;
+  document.querySelectorAll('.method-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('m-'+m)?.classList.add('active');
+  ['email','magic','bio','oauth'].forEach(x=>document.getElementById('method-'+x)?document.getElementById('method-'+x).style.display='none':'');
+  if(m==='email'){document.getElementById('method-email').style.display='block'}
+  else if(m==='magic'){document.getElementById('method-magic').style.display='flex'}
+  else if(m==='bio'){document.getElementById('method-bio').style.display='block'}
+  else{
+    document.getElementById('method-oauth').style.display='flex';
+    const names={google:'Google',github:'GitHub',ms:'Microsoft',apple:'Apple'};
+    document.getElementById('oauthName').textContent='Connect with '+names[m];
+    document.getElementById('oauthIcon').textContent={google:'🔵',github:'⬛',ms:'⊞',apple:'🍎'}[m]||'🔐';
+    document.getElementById('oauthProvider').textContent=names[m]||m;
+  }
+}
+
+function togglePwd(id,el){const i=document.getElementById(id);i.type=i.type==='password'?'text':'password';el.textContent=i.type==='password'?'👁':'🙈'}
+
+function doLogin(){
+  const e=document.getElementById('lemail').value.trim();
+  const p=document.getElementById('lpwd').value;
+  const err=document.getElementById('loginErr');
+  err.classList.remove('show');
+  const btn=document.getElementById('loginBtn');
+  if((e==='admin@neuralbug.io'&&p==='admin123')||(e.includes('@')&&p.length>=6)){
+    btn.textContent='Signing in…';btn.disabled=true;
+    const parts=e.split('@')[0].split('.');
+    currentUser={name:(parts[0][0].toUpperCase()+parts[0].slice(1))+' '+(parts[1]?parts[1][0].toUpperCase()+parts[1].slice(1):'User'),init:(parts[0][0]+(parts[1]?parts[1][0]:parts[0][1]||'U')).toUpperCase(),color:'#00f5a0'};
+    setTimeout(goToApp,800);
+  }else{err.classList.add('show');document.querySelector('.lc').classList.add('shake');setTimeout(()=>document.querySelector('.lc').classList.remove('shake'),400)}
+}
+
+function doMagicLink(){const e=document.getElementById('magic-email').value.trim();if(!e){toast('⚠️','Error','Enter your email');return}document.getElementById('magicOk').classList.add('show');setTimeout(()=>{currentUser={name:'User',init:'U',color:'#00d4ff'};goToApp()},2000)}
+function doOAuth(){toast('🔵','OAuth','Redirecting to '+document.getElementById('oauthProvider').textContent+'...');setTimeout(()=>{currentUser={name:'OAuth User',init:'OU',color:'#00d4ff'};goToApp()},1500)}
+function doBiometric(){
+  const ring=document.getElementById('bioRing');const status=document.getElementById('bioStatus');
+  status.textContent='Scanning…';ring.style.borderColor='var(--a4)';
+  setTimeout(()=>{status.textContent='Verified ✓';ring.style.borderColor='var(--a1)';currentUser={name:'Biometric User',init:'BU',color:'#a855f7'};setTimeout(goToApp,600)},1800);
+}
+
+// Register flow
+let regStep=1;
+function regNext(){
+  const f=document.getElementById('rfirst').value.trim(),e=document.getElementById('remail').value.trim();
+  if(!f||!e){toast('⚠️','Missing','Fill all required fields');return}
+  regStep=2;
+  document.getElementById('reg-step1').style.display='none';
+  document.getElementById('reg-step2').style.display='flex';
+  document.getElementById('rs1').classList.remove('active');document.getElementById('rs1').classList.add('done');
+  document.getElementById('rs2').classList.add('active');document.getElementById('rl1').classList.add('done');
+  document.getElementById('regStepNum').textContent='2';
+}
+function regBack(){regStep=1;document.getElementById('reg-step2').style.display='none';document.getElementById('reg-step1').style.display='flex';document.getElementById('rs1').classList.add('active');document.getElementById('rs1').classList.remove('done');document.getElementById('rs2').classList.remove('active');document.getElementById('rl1').classList.remove('done');document.getElementById('regStepNum').textContent='1'}
+function doRegister(){
+  const p1=document.getElementById('rpwd').value,p2=document.getElementById('rpwd2').value;
+  if(p1.length<8){toast('⚠️','Password','Min 8 chars');return}
+  if(p1!==p2){toast('⚠️','Mismatch','Passwords do not match');return}
+  if(!document.getElementById('rterms').checked){toast('⚠️','Terms','Please accept terms');return}
+  const f=document.getElementById('rfirst').value.trim(),l=document.getElementById('rlast').value.trim();
+  document.getElementById('regOk').classList.add('show');
+  currentUser={name:f+' '+l,init:(f[0]+(l[0]||'')).toUpperCase(),color:'#00f5a0'};
+  setTimeout(goToApp,1200);
+}
+function doSSO(){const d=document.getElementById('ssoDomain').value.trim();if(!d){toast('⚠️','Domain','Enter company domain');return}toast('🔐','SSO','Connecting to '+document.getElementById('ssoIdp').value+'...');setTimeout(()=>{currentUser={name:'SSO User',init:'SU',color:'#a855f7'};goToApp()},2000)}
+
+// Forgot password (OTP flow)
+let fgStep=1;
+const OTP_CODE='123456';
+function fgStep1(){const e=document.getElementById('fg-email').value.trim();if(!e){toast('⚠️','Email','Enter email');return}document.getElementById('fgEmailShow').textContent=e;document.getElementById('fg1').style.display='none';document.getElementById('fg2').style.display='flex';document.getElementById('fs1').classList.remove('active');document.getElementById('fs1').classList.add('done');document.getElementById('fs2').classList.add('active');document.getElementById('fl1').classList.add('done');document.getElementById('fgStepNum').textContent='2';document.querySelectorAll('.otp-box')[0].focus();toast('📧','OTP Sent','Check your email for the 6-digit code')}
+function fgStep2(){const code=Array.from(document.querySelectorAll('.otp-box')).map(b=>b.value).join('');if(code!==OTP_CODE){document.getElementById('otpRow').classList.add('shake');setTimeout(()=>document.getElementById('otpRow').classList.remove('shake'),400);toast('⚠️','Wrong OTP','Try: 123456');return}document.getElementById('fg2').style.display='none';document.getElementById('fg3').style.display='flex';document.getElementById('fs2').classList.remove('active');document.getElementById('fs2').classList.add('done');document.getElementById('fs3').classList.add('active');document.getElementById('fl2').classList.add('done');document.getElementById('fgStepNum').textContent='3'}
+function fgStep3(){const p1=document.getElementById('fg-pwd1').value,p2=document.getElementById('fg-pwd2').value;if(p1.length<8){toast('⚠️','Password','Min 8 chars');return}if(p1!==p2){toast('⚠️','Mismatch','Passwords do not match');return}toast('✅','Password Reset','Password changed successfully!');setTimeout(()=>lTab('in'),1500)}
+function otpNext(el,i){if(el.value.length===1&&i<5)document.querySelectorAll('.otp-box')[i+1].focus()}
+function otpBack(e,i){if(e.key==='Backspace'&&!e.target.value&&i>0){document.querySelectorAll('.otp-box')[i-1].focus()}}
+
+// ═══════════════════════════════════════════════════
+//  PAGE TRANSITIONS
+// ═══════════════════════════════════════════════════
+function goToApp(){
+  const lp=document.getElementById('loginPage'),ap=document.getElementById('appPage');
+  const n=currentUser.name.split(' ');
+  document.getElementById('navAv').textContent=currentUser.init;
+  document.getElementById('navAv').style.color=currentUser.color;
+  document.getElementById('navAv').style.background=currentUser.color+'22';
+  document.getElementById('navName').textContent=n[0]+(n[1]?' '+n[1][0]+'.':'');
+  lp.style.transition='opacity .45s ease,transform .45s ease';
+  lp.style.opacity='0';lp.style.transform='translateY(-14px)';
+  setTimeout(()=>{
+    lp.classList.add('hidden');ap.classList.remove('hidden');
+    ap.style.opacity='0';ap.style.transform='translateY(14px)';
+    ap.style.transition='opacity .45s ease,transform .45s ease';
+    setTimeout(()=>{ap.style.opacity='1';ap.style.transform='translateY(0)'},20);
+    initApp();
+    toast('👋','Welcome!','Signed in as '+currentUser.name);
+  },420);
+}
+function doLogout(){
+  const ap=document.getElementById('appPage'),lp=document.getElementById('loginPage');
+  ap.style.transition='opacity .3s ease';ap.style.opacity='0';
+  setTimeout(()=>{
+    ap.classList.add('hidden');lp.classList.remove('hidden');
+    lp.style.opacity='0';lp.style.transform='translateY(8px)';
+    lp.style.transition='opacity .35s ease,transform .35s ease';
+    setTimeout(()=>{lp.style.opacity='1';lp.style.transform='translateY(0)'},20);
+    document.getElementById('userDD').classList.remove('open');
+    currentUser=null;toast('🚪','Signed out','See you next time!');
+  },280);
+}
+function toggleDD(){document.getElementById('userDD').classList.toggle('open')}
+
+// ═══════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════
+let bugs=[], activities=[], notifs=[], team=[];
+let bugTabSt='open', bugSev='all', bugProj=null;
+let dashF='all', dashQ='', activeBug=null, bugCtr=100;
+let scanMode='url', scanCat='all';
+let scanResults=[], pdfData=null, imgData=null;
+
+const BUGS=[
+  {id:'BUG-001',title:'Auth token expiry silent logout',comp:'Auth Service',project:'Auth Service',sev:'critical',stat:'open',conf:96,ai:'AM',ac:'#00f5a0',an:'Arjun M.',desc:'Users silently logged out when JWT expires.',stack:'TokenExpiredError\n  at verify (/auth/middleware.js:34)',fix:'Add interceptor to refresh token 60s before expiry.',cat:'Backend',src:'manual'},
+  {id:'BUG-002',title:'Payment double-charge on retry',comp:'Payment',project:'Core API',sev:'critical',stat:'ai-fixing',conf:91,ai:'AI',ac:'#a855f7',an:'AI Bot',desc:'Retrying failed payments creates duplicate charge.',stack:'StripeError: Request already processed',fix:'Implement idempotency keys on all Stripe calls.',cat:'Backend',src:'manual'},
+  {id:'BUG-003',title:'Dashboard chart NaN on empty data',comp:'Frontend',project:'Frontend',sev:'high',stat:'in-progress',conf:88,ai:'PS',ac:'#00d4ff',an:'Priya S.',desc:'Recharts crashes in Safari with zero bugs.',stack:'TypeError: Cannot read property "length" of undefined',fix:'Add null-check before passing data to Recharts.',cat:'Frontend',src:'manual'},
+  {id:'BUG-004',title:'Search API stale cache after update',comp:'Core API',project:'Core API',sev:'high',stat:'open',conf:79,ai:'RV',ac:'#ffa800',an:'Rohan V.',desc:'Search returns old results for 10 minutes.',stack:'RedisError: WRONGTYPE Operation',fix:'Invalidate cache on PUT/PATCH mutations.',cat:'Backend',src:'manual'},
+  {id:'BUG-005',title:'Push notifications fail iOS 17.4',comp:'Mobile App',project:'Mobile App',sev:'medium',stat:'in-progress',conf:72,ai:'NK',ac:'#a855f7',an:'Neha K.',desc:'APNs drops notifications silently.',stack:'APNs Error: BadDeviceToken',fix:'Refresh APNs device tokens on app launch.',cat:'System',src:'manual'},
+  {id:'BUG-006',title:'CSV export encoding special chars',comp:'Core API',project:'Core API',sev:'low',stat:'resolved',conf:99,ai:'AM',ac:'#00f5a0',an:'Arjun M.',desc:'CSV non-ASCII chars corrupted.',stack:'',fix:'Add UTF-8 BOM at CSV file header.',cat:'Frontend',src:'manual'},
+  {id:'BUG-007',title:'Profile image upload 413 error',comp:'Core API',project:'Core API',sev:'medium',stat:'review',conf:85,ai:'RV',ac:'#ffa800',an:'Rohan V.',desc:'Images >2MB return 413 despite UI showing 5MB.',stack:'PayloadTooLargeError',fix:'Increase nginx client_max_body_size to 10m.',cat:'Backend',src:'manual'},
+];
+const NOTIFS=[
+  {id:'1',icon:'🔴',title:'Critical Bug Detected',sub:'BUG-001 Auth token race — 47 users affected',type:'critical',read:false},
+  {id:'2',icon:'💳',title:'Payment Gateway Alert',sub:'BUG-002 double-charge confirmed',type:'critical',read:false},
+  {id:'3',icon:'🤖',title:'AI Auto-Fixed',sub:'BUG-006 CSV truncation resolved automatically',type:'ai',read:false},
+  {id:'4',icon:'🔍',title:'AI Scan Complete',sub:'3 new patterns detected across codebase',type:'ai',read:false},
+  {id:'5',icon:'⚠️',title:'Memory Leak Growing',sub:'WebSocket memory leak now at 2.1 GB',type:'warning',read:false},
+  {id:'6',icon:'📊',title:'Sprint 14 on Track',sub:'68% complete with 10 days remaining',type:'info',read:true},
+];
+const TEAM=[
+  {name:'Arjun Mehta',role:'Admin / Dev Lead',init:'AM',color:'#00f5a0',resolved:14,open:8,score:98},
+  {name:'Priya Sharma',role:'QA Engineer',init:'PS',color:'#00d4ff',resolved:11,open:5,score:92},
+  {name:'Rohan Verma',role:'Developer',init:'RV',color:'#ffa800',resolved:9,open:6,score:87},
+  {name:'Neha Kapoor',role:'DevOps Engineer',init:'NK',color:'#a855f7',resolved:7,open:3,score:83},
+];
+
+// ═══════════════════════════════════════════════════
+//  APP INIT
+// ═══════════════════════════════════════════════════
+function initApp(){
+  bugs=[...BUGS];notifs=[...NOTIFS];team=[...TEAM];
+  activities=[
+    {dot:'#00f5a0',msg:'<em>AI</em> auto-resolved BUG-006 — CSV encoding fix deployed',time:'2m ago'},
+    {dot:'#a855f7',msg:'<em>AI</em> generating patch for BUG-002 payment retry',time:'8m ago'},
+    {dot:'#ffa800',msg:'<em>Priya S.</em> picked up BUG-003 dashboard crash',time:'30m ago'},
+    {dot:'#ff6b6b',msg:'<em>BUG-001</em> escalated to Critical — auth silent logout',time:'1h ago'},
+    {dot:'#00d4ff',msg:'<em>Rohan V.</em> commented on BUG-004 stale cache',time:'2h ago'},
+  ];
+  renderDash();renderBugs();renderKanban();renderTeam();renderNotifs('all');renderHeatmap();renderWeekChart();renderAct();renderSettings('general');
+  updateNotifBadge();
+  document.addEventListener('paste', handlePaste);
+  setTimeout(()=>toast('🤖','AI Scan','Pattern detected in Auth module — 3 bugs share root cause'),7000);
+}
+
+// ═══════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════
+function navTo(v,el){
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  document.getElementById('view-'+v)?.classList.add('active');
+  document.querySelectorAll('.nb').forEach(x=>x.classList.remove('active'));
+  if(el)el.classList.add('active');
+  document.getElementById('userDD').classList.remove('open');
+}
+function sideNav(v,el){navTo(v,null);document.querySelectorAll('.sb-item').forEach(x=>x.classList.remove('active'));el.classList.add('active')}
+function projFilter(p,el){bugProj=p;sideNav('bugs',el);renderBugs();toast('🔵','Filter','Showing: '+p)}
+function setChip(el,parent){const p=typeof parent==='string'?document.querySelectorAll(parent):parent.querySelectorAll?.('.fchip');p?.forEach(c=>c.classList.remove('active'));el.classList.add('active')}
+
+// ═══════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════
+function renderDash(){
+  const list=bugs.filter(b=>(dashF==='all'||b.sev===dashF)&&(b.title+b.id+b.comp).toLowerCase().includes((dashQ||'').toLowerCase())).slice(0,5);
+  const el=document.getElementById('dashBody');
+  if(el)el.innerHTML=list.map(b=>dRow(b)).join('');
+}
+function dRow(b){
+  return `<tr onclick="openBug('${b.id}')">
+    <td><div class="bid">${b.id}</div></td>
+    <td><div class="bt">${b.title}</div><div class="bc">${b.comp}</div></td>
+    <td><span class="sev ${b.sev}">${b.sev}</span></td>
+    <td><span class="sp ${b.stat}">${b.stat.replace(/-/g,' ')}</span></td>
+    <td><div class="conf-wrap"><div class="conf-bar"><div class="conf-fill" style="width:${b.conf}%"></div></div><span style="color:var(--t3)">${b.conf}%</span></div></td>
+    <td><div style="display:flex;align-items:center;gap:5px"><div class="av" style="background:${b.ac}22;color:${b.ac}">${b.ai}</div><span style="font-size:11px">${b.an}</span></div></td>
+  </tr>`;
+}
+
+// ═══════════════════════════════════════════════════
+//  BUG TABLE
+// ═══════════════════════════════════════════════════
+function setTab(t,el){bugTabSt=t;document.querySelectorAll('#bugTabs .tab').forEach(x=>x.classList.remove('active'));el.classList.add('active');renderBugs()}
+function setSev(s,el){bugSev=s;document.querySelectorAll('[data-sev]').forEach(x=>x.classList.remove('active'));el.classList.add('active');renderBugs()}
+function renderBugs(){
+  const q=(document.getElementById('bugQ')||{}).value||'';
+  const list=bugs.filter(b=>{
+    const mT=bugTabSt==='open'?b.stat==='open':b.stat===bugTabSt;
+    return mT&&(bugSev==='all'||b.sev===bugSev)&&(b.title+b.id+b.comp).toLowerCase().includes(q.toLowerCase())&&(!bugProj||b.project===bugProj||b.comp===bugProj);
+  });
+  const cnts={open:0,'ai-fixing':0,'in-progress':0,review:0,resolved:0};
+  bugs.forEach(b=>{if(cnts[b.stat]!==undefined)cnts[b.stat]++});
+  document.querySelectorAll('#bugTabs .tab').forEach((t,i)=>{
+    const k=['open','ai-fixing','in-progress','review','resolved'][i];
+    const n=['Open','AI Fixing','In Progress','Review','Resolved'][i];
+    if(k)t.textContent=`${n} (${cnts[k]||0})`;
+  });
+  const src={manual:'✍️',url:'🌐',pdf:'📄',img:'🖼',scanner:'🤖'};
+  const el=document.getElementById('bugBody');
+  if(el)el.innerHTML=list.length?list.map(b=>`<tr onclick="openBug('${b.id}')">
+    <td><input type="checkbox" class="rck" style="accent-color:var(--a1)" onclick="event.stopPropagation()"/></td>
+    <td><div class="bid">${b.id}</div></td>
+    <td><div class="bt">${b.title}</div><div class="bc">${b.comp} · ${b.cat||'General'}</div></td>
+    <td><span class="sev ${b.sev}">${b.sev}</span></td>
+    <td><span class="sp ${b.stat}">${b.stat.replace(/-/g,' ')}</span></td>
+    <td><span style="font-size:11px">${src[b.src]||'✍️'} ${b.src||'manual'}</span></td>
+    <td><div class="conf-wrap"><div class="conf-bar"><div class="conf-fill" style="width:${b.conf}%"></div></div><span style="color:var(--t3)">${b.conf}%</span></div></td>
+    <td><div style="display:flex;align-items:center;gap:5px"><div class="av" style="background:${b.ac}22;color:${b.ac}">${b.ai}</div><span style="font-size:11px">${b.an}</span></div></td>
+    <td><div style="display:flex;gap:3px"><button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openBug('${b.id}')">View</button><button class="btn btn-danger btn-xs" onclick="event.stopPropagation();delBug('${b.id}')">Del</button></div></td>
+  </tr>`).join(''):`<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--t3);font-family:monospace;font-size:11px">No bugs match filters</td></tr>`;
+  document.getElementById('statOpen').textContent=bugs.filter(b=>b.stat==='open').length;
+  document.getElementById('sbCount').textContent=bugs.filter(b=>b.stat!=='resolved').length;
+}
+function delBug(id){bugs=bugs.filter(b=>b.id!==id);renderBugs();renderDash();toast('🗑','Deleted',id+' removed')}
+
+// Bug detail
+function openBug(id){
+  const b=bugs.find(x=>x.id===id);if(!b)return;activeBug=b;
+  document.getElementById('mId').textContent=b.id+' · '+b.comp;
+  document.getElementById('mTitle').textContent=b.title;
+  document.getElementById('mDesc').textContent=b.desc||'No description.';
+  document.getElementById('mStack').innerHTML=b.stack||'<span style="color:var(--t3)">No stack trace.</span>';
+  document.getElementById('mConf').textContent=b.conf+'% confidence';
+  document.getElementById('mAI').textContent=b.fix||'AI analysis pending.';
+  document.getElementById('mMeta').innerHTML=
+    mc('Severity',`<span class="sev ${b.sev}">${b.sev}</span>`)+
+    mc('Status',`<span class="sp ${b.stat}">${b.stat.replace(/-/g,' ')}</span>`)+
+    mc('Category',b.cat||'General')+mc('Component',b.comp)+mc('Assignee',b.an)+mc('Source',b.src||'manual');
+  document.getElementById('mTimeline').innerHTML=`
+    <div class="tl"><div class="tl-dot">📝</div><div><div style="display:flex;gap:8px;align-items:baseline"><div class="tl-action">Bug Created</div><div class="tl-time">2 days ago</div></div><div class="tl-detail">Reported via ${b.src||'manual'} input</div></div></div>
+    <div class="tl"><div class="tl-dot">🤖</div><div><div style="display:flex;gap:8px;align-items:baseline"><div class="tl-action">AI Triaged</div><div class="tl-time">2 days ago</div></div><div class="tl-detail">Severity: ${b.sev} · Confidence: ${b.conf}%</div></div></div>`;
+  document.getElementById('bugModal').classList.add('open');
+}
+function mc(k,v){return `<div class="mc"><div class="mk">${k}</div><div class="mv">${v}</div></div>`}
+function applyFix(){closeM('bugModal');if(activeBug){activeBug.stat='ai-fixing';renderBugs();renderDash()}toast('⚡','AI Fix','Patch applying — auto-deploy in ~60s')}
+function escalate(){closeM('bugModal');if(activeBug){activeBug.stat='in-progress';renderBugs();renderDash()}toast('⚠️','Escalated','Team lead notified')}
+
+// New bug
+function openNewBug(){document.getElementById('newModal').classList.add('open')}
+function submitBug(){
+  const title=document.getElementById('nbTitle').value.trim();
+  if(!title){toast('⚠️','Missing','Enter a bug title');return}
+  const b={id:'BUG-'+String(++bugCtr),title,comp:document.getElementById('nbComp').value,project:document.getElementById('nbComp').value,sev:document.getElementById('nbSev').value,stat:'open',conf:Math.floor(Math.random()*25+70),ai:currentUser.init,ac:currentUser.color,an:currentUser.name,desc:document.getElementById('nbDesc').value,cat:document.getElementById('nbCat').value,src:'manual',fix:''};
+  bugs.unshift(b);
+  document.getElementById('nbTitle').value='';document.getElementById('nbDesc').value='';
+  closeM('newModal');renderBugs();renderDash();
+  activities.unshift({dot:'#a855f7',msg:`<em>${currentUser.name}</em> submitted ${b.id}`,time:'just now'});
+  renderAct();toast('🤖','Submitted',b.id+' — AI triaging…');
+}
+
+// ═══════════════════════════════════════════════════
+//  BUG SCANNER — CORE
+// ═══════════════════════════════════════════════════
+function setScTab(t){
+  scanMode=t;
+  ['url','pdf','img','manual'].forEach(x=>{
+    document.getElementById('sc-'+x).style.display=x===t?(x==='manual'?'flex':'block'):'none';
+    document.getElementById('stab-'+x).classList.toggle('active',x===t);
+  });
+}
+
+function setCat(c,el){
+  scanCat=c;
+  document.querySelectorAll('.cat-chip').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function handleFile(inp,type){
+  const file=inp.files[0];if(!file)return;
+  if(type==='pdf'){
+    pdfData=null;
+    const reader=new FileReader();
+    reader.onload=e=>{pdfData=e.target.result.split(',')[1];document.getElementById('pdfFile').textContent='📄 '+file.name+' ('+Math.round(file.size/1024)+'KB)';document.getElementById('pdfScanBtn').disabled=false};
+    reader.readAsDataURL(file);
+  }else{
+    imgData=null;
+    const reader=new FileReader();
+    reader.onload=e=>{
+      imgData={b64:e.target.result.split(',')[1],type:file.type||'image/png'};
+      document.getElementById('imgFile').textContent='🖼 '+file.name+' ('+Math.round(file.size/1024)+'KB)';
+      document.getElementById('imgScanBtn').disabled=false;
+      const preview=document.getElementById('imgPreview');
+      preview.src=e.target.result;document.getElementById('imgPreviewWrap').style.display='block';
+    };reader.readAsDataURL(file);
+  }
+}
+
+function handleDrop(e,type){
+  e.preventDefault();document.getElementById(type==='pdf'?'pdfZone':'imgZone').classList.remove('drag-over');
+  const file=e.dataTransfer.files[0];if(!file)return;
+  const fakeInp={files:[file]};handleFile(fakeInp,type);
+}
+
+function handlePaste(e){
+  const items=e.clipboardData?.items;if(!items)return;
+  for(const item of items){
+    if(item.type.startsWith('image/')){
+      const file=item.getAsFile();if(!file)continue;
+      const fakeInp={files:[file]};handleFile(fakeInp,'img');
+      if(document.getElementById('view-scanner').classList.contains('active'))setScTab('img');
+      toast('📋','Pasted','Screenshot pasted — click Analyze');break;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  SCAN — REAL ANTHROPIC API
+// ═══════════════════════════════════════════════════
+const SCAN_SYSTEM=`You are an expert QA engineer and security analyst specializing in automated bug detection. Analyze the provided content and identify bugs across these four categories:
+
+1. FRONTEND: CSS issues, JavaScript errors, React/framework bugs, layout breaks, browser compatibility, console errors, performance bottlenecks
+2. BACKEND: API errors (4xx/5xx), database issues, authentication failures, race conditions, memory leaks, N+1 queries  
+3. UI/UX: WCAG accessibility failures, poor contrast ratios, missing focus states, confusing navigation, broken responsive design, missing error states
+4. SYSTEM: Security vulnerabilities (XSS, CSRF, SQLi), performance issues, misconfiguration, infrastructure problems, dependency vulnerabilities
+
+For EACH bug found, respond with a JSON array (only JSON, no markdown):
+[
+  {
+    "category": "Frontend|Backend|UI/UX|System",
+    "severity": "critical|high|medium|low",
+    "title": "Short bug title (max 60 chars)",
+    "description": "Clear description of the bug (2-3 sentences)",
+    "fix": "Specific actionable fix suggestion (1-2 sentences)",
+    "confidence": 85
+  }
+]
+
+Find at least 3-6 bugs. If analyzing a URL, actually research what issues are known or visible. Be specific and practical.`;
+
+async function startScan(){
+  const anim=document.getElementById('scanningAnim');
+  const resultsEl=document.getElementById('scanResults');
+  anim.classList.add('show');resultsEl.style.display='none';
+  // Hide input areas
+  ['url','pdf','img','manual'].forEach(x=>document.getElementById('sc-'+x).style.display='none');
+
+  // Progress animation
+  let prog=0;
+  const fill=document.getElementById('scanFill');
+  const label=document.getElementById('scanLabel');
+  const sub=document.getElementById('scanSub');
+  const labels=['Initializing AI scanner…','Connecting to Claude AI…','Analyzing content…','Detecting patterns…','Categorizing issues…','Generating fix suggestions…'];
+  let li=0;
+  const interval=setInterval(()=>{prog=Math.min(90,prog+Math.random()*8+2);fill.style.width=prog+'%';label.textContent=labels[Math.min(li++,labels.length-1)];sub.textContent=['Scanning for Frontend issues…','Analyzing Backend APIs…','Checking UI/UX compliance…','Reviewing System security…'][Math.floor(Math.random()*4)]},600);
+
+  try{
+    let messages=[];
+    if(scanMode==='url'){
+      const url=(document.getElementById('urlInp').value||'').trim();
+      if(!url){clearInterval(interval);resetScan();toast('⚠️','Error','Enter a URL');return}
+      messages=[{role:'user',content:`Analyze this URL for bugs across Frontend, Backend, UI/UX and System categories: ${url}\n\nResearch known issues, common problems for this type of site, and any visible issues. Be specific about actual problems users might encounter.`}];
+      // Use web_search tool
+      const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,system:SCAN_SYSTEM,tools:[{type:'web_search_20250305',name:'web_search'}],messages})});
+      const data=await resp.json();
+      const text=data.content?.filter(b=>b.type==='text').map(b=>b.text).join('\n')||'[]';
+      parseScanResults(text,url,'url');
+    }else if(scanMode==='pdf'){
+      if(!pdfData){clearInterval(interval);resetScan();toast('⚠️','Error','Upload a PDF first');return}
+      messages=[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:pdfData}},{type:'text',text:'Analyze this document for software bugs, error patterns, security issues, and system problems. Identify specific issues across Frontend, Backend, UI/UX and System categories.'}]}];
+      const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,system:SCAN_SYSTEM,messages})});
+      const data=await resp.json();
+      const text=data.content?.filter(b=>b.type==='text').map(b=>b.text).join('\n')||'[]';
+      parseScanResults(text,'PDF Document','pdf');
+    }else if(scanMode==='img'){
+      if(!imgData){clearInterval(interval);resetScan();toast('⚠️','Error','Upload a screenshot first');return}
+      messages=[{role:'user',content:[{type:'image',source:{type:'base64',media_type:imgData.type,data:imgData.b64}},{type:'text',text:'Analyze this screenshot for bugs, UI issues, accessibility problems, broken layouts, error states, and any visual anomalies. Identify issues across Frontend and UI/UX categories especially.'}]}];
+      const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,system:SCAN_SYSTEM,messages})});
+      const data=await resp.json();
+      const text=data.content?.filter(b=>b.type==='text').map(b=>b.text).join('\n')||'[]';
+      parseScanResults(text,'Screenshot','img');
+    }else{
+      const input=document.getElementById('manualInput').value.trim();
+      const ctx=document.getElementById('manualCtx').value.trim();
+      if(!input){clearInterval(interval);resetScan();toast('⚠️','Error','Enter bug description');return}
+      messages=[{role:'user',content:`Analyze this bug description/error and identify all issues:\n\n${input}\n\nContext: ${ctx||'Not specified'}`}];
+      const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,system:SCAN_SYSTEM,messages})});
+      const data=await resp.json();
+      const text=data.content?.filter(b=>b.type==='text').map(b=>b.text).join('\n')||'[]';
+      parseScanResults(text,'Manual Input','manual');
+    }
+    clearInterval(interval);
+    fill.style.width='100%';
+    setTimeout(()=>{anim.classList.remove('show');setScTab(scanMode);showResults()},500);
+  }catch(err){
+    clearInterval(interval);
+    console.error(err);
+    // Fallback demo results if API fails
+    scanResults=getDemoResults();
+    anim.classList.remove('show');setScTab(scanMode);showResults();
+    toast('📡','Offline Mode','API unavailable — showing demo scan results');
+  }
+}
+
+function parseScanResults(text,source,srcType){
+  try{
+    const cleaned=text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    const arr=JSON.parse(cleaned);
+    scanResults=arr.map((r,i)=>({...r,id:`SCAN-${String(bugCtr+i+1).padStart(3,'0')}`,source,srcType}));
+  }catch(e){
+    const match=text.match(/\[[\s\S]*\]/);
+    if(match)try{scanResults=JSON.parse(match[0]).map((r,i)=>({...r,id:`SCAN-${String(bugCtr+i+1).padStart(3,'0')}`,source,srcType}));return}catch{}
+    scanResults=getDemoResults();
+  }
+}
+
+function getDemoResults(){
+  return [
+    {id:'SCAN-101',category:'Frontend',severity:'high',title:'Missing error boundary causes white screen',description:'React component tree lacks error boundaries, causing full app crash on unhandled exceptions.',fix:'Wrap major components in React ErrorBoundary with fallback UI.',confidence:89,source:'Demo',srcType:'url'},
+    {id:'SCAN-102',category:'Backend',severity:'critical',title:'SQL injection vulnerability in search endpoint',description:'User input passed directly to SQL query without parameterization.',fix:'Use parameterized queries or ORM methods. Never interpolate user input into SQL.',confidence:96,source:'Demo',srcType:'url'},
+    {id:'SCAN-103',category:'UI/UX',severity:'medium',title:'WCAG contrast ratio fails (2.1:1)',description:'Text on primary buttons has insufficient contrast ratio — WCAG AA requires 4.5:1.',fix:'Darken button text or lighten background to meet WCAG AA contrast requirements.',confidence:94,source:'Demo',srcType:'url'},
+    {id:'SCAN-104',category:'System',severity:'high',title:'Sensitive data exposed in error responses',description:'Stack traces and internal paths leaked in production API error responses.',fix:'Configure error handler to return generic messages in production. Log details server-side.',confidence:91,source:'Demo',srcType:'url'},
+    {id:'SCAN-105',category:'Frontend',severity:'medium',title:'Memory leak in useEffect cleanup',description:'Event listeners and subscriptions not cleaned up on component unmount.',fix:'Return cleanup function from useEffect to remove listeners.',confidence:82,source:'Demo',srcType:'url'},
+  ];
+}
+
+function showResults(){
+  const catMap={Frontend:'fe',Backend:'be','UI/UX':'ux',System:'sys'};
+  const filtered=scanCat==='all'?scanResults:scanResults.filter(r=>r.category?.toLowerCase().replace('/','')===scanCat.replace('uiux','uiux').replace('frontend','frontend'));
+  const el=document.getElementById('resultsGrid');
+  const rc=document.getElementById('resultCount');
+  const rs=document.getElementById('scanResults');
+  rc.textContent=`${filtered.length} issues found`;
+  el.innerHTML=filtered.map(r=>`<div class="result-card rc-${r.severity}" onclick="addToTracker('${r.id}')">
+    <div class="rc-top"><span class="rc-cat ${catMap[r.category]||'fe'}">${r.category||'General'}</span><span class="sev ${r.severity}">${r.severity||'medium'}</span></div>
+    <div class="rc-title">${r.title}</div>
+    <div class="rc-desc">${r.description}</div>
+    <div class="rc-fix"><div class="rc-fix-lbl">AI Fix Suggestion</div>${r.fix}</div>
+    <div class="rc-foot">
+      <span class="rc-conf">Confidence: ${r.confidence||75}%</span>
+      <button class="btn btn-primary btn-xs" onclick="event.stopPropagation();addToTracker('${r.id}')">+ Track</button>
+    </div>
+  </div>`).join('')||'<div style="grid-column:1/-1;text-align:center;padding:28px;color:var(--t3);font-family:monospace;font-size:12px">No issues found in this category</div>';
+  rs.style.display='block';
+  if(filtered.length>0)toast('🔍','Scan Complete',`${filtered.length} bugs detected — click any to add to tracker`);
+}
+
+function addToTracker(scanId){
+  const r=scanResults.find(x=>x.id===scanId);if(!r)return;
+  if(bugs.find(b=>b.id===scanId))return toast('ℹ️','Already Added',scanId+' already in tracker');
+  const catMap={'Frontend':'Frontend','Backend':'Core API','UI/UX':'Frontend','System':'Core API'};
+  bugs.unshift({
+    id:scanId,title:r.title,comp:catMap[r.category]||'Core API',project:catMap[r.category]||'Core API',
+    sev:r.severity||'medium',stat:'open',conf:r.confidence||75,
+    ai:currentUser.init,ac:currentUser.color,an:currentUser.name,
+    desc:r.description,stack:'',fix:r.fix,cat:r.category,src:r.srcType||'scanner'
+  });
+  bugCtr++;renderBugs();renderDash();
+  toast('✅','Added',scanId+' → Bug Tracker');
+  activities.unshift({dot:'#a855f7',msg:`<em>Scanner</em> detected ${scanId} — ${r.category} ${r.severity} bug`,time:'just now'});renderAct();
+}
+function addAllToTracker(){
+  let added=0;
+  scanResults.forEach(r=>{if(!bugs.find(b=>b.id===r.id)){addToTracker(r.id);added++}});
+  toast('✅','Batch Added',added+' bugs added to tracker');
+}
+function clearResults(){scanResults=[];document.getElementById('scanResults').style.display='none';toast('🗑','Cleared','Scan results cleared')}
+function exportResults(){
+  if(!scanResults.length){toast('⚠️','Empty','No results to export');return}
+  const rows=[['ID','Category','Severity','Title','Description','Fix','Confidence'],...scanResults.map(r=>[r.id,r.category,r.severity,`"${r.title.replace(/"/g,'""')}"`,`"${r.description.replace(/"/g,'""')}"`,`"${r.fix.replace(/"/g,'""')}"`,r.confidence+'%'])];
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.map(r=>r.join(',')).join('\n'));a.download='neuralbug-scan-results.csv';a.click();
+  toast('⬇️','Exported','Scan results CSV downloaded');
+}
+function resetScan(){document.getElementById('scanningAnim').classList.remove('show');setScTab(scanMode)}
+
+// ═══════════════════════════════════════════════════
+//  AI QUERY
+// ═══════════════════════════════════════════════════
+function runAI(){
+  const q=document.getElementById('aiQ').value.trim();if(!q)return;
+  document.getElementById('aiQ').value='';
+  const l=q.toLowerCase();
+  let r='';
+  if(l.includes('critical'))r=`${bugs.filter(b=>b.sev==='critical').length} critical bugs open. Top: ${bugs.find(b=>b.sev==='critical')?.id} — immediate action required.`;
+  else if(l.includes('today'))r='Today: AI scanner ran 14 times, 42 bugs detected, 87% resolution rate across all projects.';
+  else if(l.includes('fix')||l.includes('resolv'))r=`${bugs.filter(b=>b.stat==='resolved').length} bugs resolved. Recommend using Scanner to find new issues.`;
+  else r=`Analyzing ${bugs.length} tracked bugs. ${bugs.filter(b=>b.sev==='critical').length} critical, ${bugs.filter(b=>b.sev==='high').length} high priority open. Try the Bug Scanner for new detections.`;
+  toast('🤖','AI Response',r);
+}
+
+// ═══════════════════════════════════════════════════
+//  ACTIVITY
+// ═══════════════════════════════════════════════════
+function renderAct(){const el=document.getElementById('actFeed');if(!el)return;el.innerHTML=activities.map(a=>`<div class="ai"><div class="ai-dot" style="background:${a.dot}"></div><div class="ai-msg">${a.msg}</div><div class="ai-time">${a.time}</div></div>`).join('')}
+
+// ═══════════════════════════════════════════════════
+//  KANBAN
+// ═══════════════════════════════════════════════════
+function renderKanban(){
+  const el=document.getElementById('kanbanBoard');if(!el)return;
+  const cols=[{l:'Backlog',s:'open',c:'#4a5568'},{l:'In Progress',s:'in-progress',c:'#ffa800'},{l:'Review',s:'review',c:'#00d4ff'},{l:'Done',s:'resolved',c:'#00f5a0'}];
+  el.innerHTML=cols.map(col=>`<div class="kc"><div class="kc-hd" style="border-top:3px solid ${col.c};border-radius:10px 10px 0 0"><span>${col.l}</span><span class="kc-cnt">${bugs.filter(b=>b.stat===col.s).length}</span></div><div class="kc-body">${bugs.filter(b=>b.stat===col.s).map(b=>`<div class="kcard" onclick="openBug('${b.id}')"><div class="kcard-id">${b.id}</div><div class="kcard-title">${b.title}</div><div class="kcard-foot"><span class="sev ${b.sev}">${b.sev}</span><div class="av" style="background:${b.ac}22;color:${b.ac};width:20px;height:20px;font-size:9px">${b.ai}</div></div></div>`).join('')}<div style="text-align:center;padding:7px;cursor:pointer;color:var(--t3);font-size:10px;border:1px dashed var(--bd);border-radius:7px" onclick="openNewBug()">+ Add</div></div></div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════
+//  TEAM
+// ═══════════════════════════════════════════════════
+function renderTeam(){
+  const el=document.getElementById('teamGrid');if(!el)return;
+  el.innerHTML=team.map(m=>`<div class="tc"><div class="tc-av" style="background:${m.color}22;color:${m.color}">${m.init}</div><div class="tc-name">${m.name}</div><div class="tc-role"><span style="width:7px;height:7px;border-radius:50%;background:var(--a1);display:inline-block;margin-right:4px;animation:blink 2s infinite"></span>${m.role}</div><div class="tc-stats"><div class="tc-stat"><div class="tcs-val" style="color:${m.color}">${m.resolved}</div><div class="tcs-lbl">Resolved</div></div><div class="tc-stat"><div class="tcs-val" style="color:var(--a4)">${m.open}</div><div class="tcs-lbl">Active</div></div><div class="tc-stat"><div class="tcs-val" style="color:var(--a2)">${m.score}%</div><div class="tcs-lbl">Score</div></div></div></div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════
+//  NOTIFICATIONS
+// ═══════════════════════════════════════════════════
+function renderNotifs(f){
+  const list=f==='all'?notifs:notifs.filter(n=>n.type===f);
+  document.getElementById('notifList').innerHTML=list.map(n=>`<div class="ni ${!n.read?'unread':''}" onclick="readN('${n.id}',this)"><div class="ni-icon">${n.icon}</div><div style="flex:1"><div class="ni-title">${n.title}</div><div class="ni-sub">${n.sub}</div></div><div class="ni-time">${n.read?'1h ago':'just now'}</div></div>`).join('');
+}
+function nTab(f,el){document.querySelectorAll('#view-notifications .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderNotifs(f)}
+function readN(id,el){const n=notifs.find(x=>x.id===id);if(n)n.read=true;el.classList.remove('unread');updateNotifBadge()}
+function markAllRead(){notifs.forEach(n=>n.read=true);renderNotifs('all');updateNotifBadge();toast('✅','All Read','All notifications marked as read')}
+function updateNotifBadge(){document.getElementById('nbadge').textContent=notifs.filter(n=>!n.read).length}
+
+// ═══════════════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════════════
+function stab(t,el){document.querySelectorAll('#view-settings .tab').forEach(x=>x.classList.remove('active'));el.classList.add('active');renderSettings(t)}
+function tog(el){el.classList.toggle('on');toast('✅','Saved','Setting updated')}
+function renderSettings(t){
+  const el=document.getElementById('settingsBody');if(!el)return;
+  const row=(l,d,on=false)=>`<div class="ss-row"><div><div class="ss-label">${l}</div><div class="ss-desc">${d}</div></div><div class="toggle ${on?'on':''}" onclick="tog(this)"></div></div>`;
+  const sel=(l,d,opts)=>`<div class="ss-row"><div><div class="ss-label">${l}</div><div class="ss-desc">${d}</div></div><select class="ss-sel" onchange="toast('✅','Saved','${l} updated')">${opts.map(o=>`<option>${o}</option>`).join('')}</select></div>`;
+  const tabs={
+    general:`<div class="ss"><div class="ss-hd">⚙️ General</div><div class="ss-body">${sel('Timezone','Used for timestamps',['Asia/Kolkata (IST)','UTC','America/New_York','Europe/London'])}${sel('Default Severity','For new bugs',['Medium','High','Critical','Low'])}${row('Dark Mode','Always-on dark interface',true)}${row('Compact Mode','Denser rows',false)}</div></div>`,
+    ai:`<div class="ss"><div class="ss-hd">🤖 AI Scanner Config</div><div class="ss-body">${row('Auto-triage new bugs','AI auto-assigns severity',true)}${row('Auto-fix (low sev)','Apply patches automatically',false)}${row('URL Browsing','Real-time URL scanning',true)}${row('Screenshot Analysis','AI visual bug detection',true)}${sel('AI Model','Claude version',['claude-sonnet-4-20250514','claude-opus-4-5'])}${sel('Confidence Threshold','Min confidence for suggestions',['70%','80%','90%'])}</div></div>`,
+    notifications:`<div class="ss"><div class="ss-hd">🔔 Notifications</div><div class="ss-body">${row('Critical Alerts','Immediate push + email',true)}${row('AI Fix Notifications','When AI resolves bugs',true)}${row('Scan Complete Alerts','After each scanner run',true)}${row('Daily Digest','Morning summary email',false)}${row('Slack Integration','Send to #bugs channel',true)}</div></div>`,
+    security:`<div class="ss"><div class="ss-hd">🔒 Security</div><div class="ss-body">${row('Two-Factor Auth','TOTP authenticator',false)}${row('Audit Log','Track all user actions',true)}${sel('Session Timeout','Auto-logout',['30 minutes','1 hour','8 hours','Never'])}<div class="ss-row"><div><div class="ss-label">API Key</div></div><button class="btn btn-warn btn-sm" onclick="toast('🔑','API Key','New key generated: nb_sk_live_****xK2p')">Regenerate</button></div></div></div>`,
+  };el.innerHTML=tabs[t]||'';
+}
+
+// ═══════════════════════════════════════════════════
+//  CHARTS
+// ═══════════════════════════════════════════════════
+function renderWeekChart(){
+  const el=document.getElementById('weekChart'),le=document.getElementById('weekLabels');
+  if(!el)return;el.innerHTML='';le.innerHTML='';
+  const days=['M','T','W','T','F','S','S'],res=[8,5,12,7,10,6,14],opn=[10,8,6,9,5,3,7],aif=[3,2,5,4,6,4,7];
+  const max=Math.max(...res,...opn,...aif);
+  days.forEach((_,i)=>{
+    const g=document.createElement('div');g.className='bc-grp';g.style.height='100%';
+    const mk=(v,cls)=>{const b=document.createElement('div');b.className='bc-bar '+cls;b.style.height=(v/max*100)+'%';return b};
+    g.appendChild(mk(res[i],'res'));g.appendChild(mk(opn[i],'opn'));g.appendChild(mk(aif[i],'aif'));
+    el.appendChild(g);
+    const l=document.createElement('div');l.className='bc-lbl';l.textContent=days[i];le.appendChild(l);
+  });
+}
+function renderHeatmap(){
+  const el=document.getElementById('heatmap');if(!el)return;el.innerHTML='';
+  const lvls=['var(--s3)','rgba(0,245,160,.15)','rgba(0,245,160,.35)','rgba(0,245,160,.65)','var(--a1)'];
+  for(let i=27;i>=0;i--){const c=Math.floor(Math.random()*12);const d=document.createElement('div');d.className='hm-cell';d.style.background=lvls[Math.min(Math.floor(c/3),4)];d.title=c+' bugs — '+i+' days ago';el.appendChild(d)}
+}
+function exportCSV(){
+  const rows=[['ID','Title','Severity','Status','Component','Category','Source','Assignee','Confidence'],...bugs.map(b=>[b.id,`"${b.title.replace(/"/g,'""')}"`,b.sev,b.stat,b.comp,b.cat||'',b.src||'manual',b.an,b.conf])];
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.map(r=>r.join(',')).join('\n'));a.download='neuralbug-export.csv';a.click();
+  toast('⬇️','Export','CSV downloaded — '+bugs.length+' bugs');
+}
+
+// ═══════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════
+function closeM(id){document.getElementById(id).classList.remove('open')}
+function toast(icon,title,msg){
+  const w=document.getElementById('toasts');
+  const t=document.createElement('div');t.className='toast';
+  t.innerHTML=`<span class="t-icon">${icon}</span><div><div class="t-title">${title}</div><div class="t-sub">${msg}</div></div>`;
+  w.appendChild(t);
+  setTimeout(()=>{t.style.transition='all .3s';t.style.opacity='0';t.style.transform='translateX(100%)';setTimeout(()=>t.remove(),300)},4500);
+}
+document.getElementById('loginPage').classList.remove('hidden');
+</script>
+</body>
+</html>
