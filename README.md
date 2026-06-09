@@ -1,4 +1,4 @@
-# 🧠 NeuralBug – AI-Powered Bug Tracking & Project Management System
+# 🧠 NeuralBug – AI-Powered Bug Tracking Support System
 
 ## Overview
 
